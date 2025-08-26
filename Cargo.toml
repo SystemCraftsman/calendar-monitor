@@ -1,0 +1,42 @@
+[package]
+name = "calendar-monitor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1.0", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for calendar APIs
+reqwest = { version = "0.11", features = ["json"] }
+
+# Environment variables
+dotenv = "0.15"
+
+# Calendar parsing (for ICS files)
+ical = "0.7"
+
+# File watching for live ICS updates
+notify = "6.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Templates (for HTML rendering)
+askama = "0.12"
+askama_axum = "0.4"

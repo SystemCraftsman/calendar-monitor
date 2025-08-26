@@ -1,0 +1,76 @@
+# Rust
+/target/
+Cargo.lock
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.test
+
+# Calendar files (potentially sensitive data)
+# Ignore all ICS files by default since they contain personal/work meeting data
+*.ics
+# But allow demo ICS files for documentation and testing
+!*_example.ics
+!demo_*.ics
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts
+dist/
+build/
+
+# Node.js (if using any frontend tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backup files
+*.bak
+*.backup
+
+# Application specific
+tokencache.json
+auth_tokens/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Documentation builds
+/docs/build/
+
+# Local configuration
+config.local.*
+settings.local.*

@@ -1,0 +1,379 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    width: 95vw;
+    max-width: 1200px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 2rem;
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e1e5e9;
+}
+
+header h1 {
+    font-size: 3rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.current-time {
+    font-size: 1.2rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Main content */
+main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 2rem;
+    align-items: start;
+    grid-template-areas: 
+        "timeblock timeblock"
+        "current next";
+}
+
+.current-meeting {
+    grid-area: current;
+}
+
+.next-meeting {
+    grid-area: next;
+}
+
+.time-blocks {
+    grid-area: timeblock;
+}
+
+.meeting-section {
+    height: 100%;
+}
+
+/* Time block bar styling */
+.time-blocks {
+    height: auto; /* Override height: 100% for time blocks */
+}
+
+.time-block-bar {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e1e5e9;
+    display: flex;
+    align-items: center;
+    min-height: 3rem;
+    transition: all 0.3s ease;
+}
+
+.time-block-bar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+}
+
+.no-time-block,
+.active-time-block-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.time-block-label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 1rem;
+}
+
+.time-block-value,
+.time-block-title {
+    font-weight: 500;
+    color: #34495e;
+    font-size: 1rem;
+}
+
+.time-block-time {
+    font-family: 'Courier New', monospace;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.time-block-countdown {
+    font-family: 'Courier New', monospace;
+    color: #28a745;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.time-block-remaining {
+    color: #28a745;
+    font-size: 0.9rem;
+}
+
+.time-block-separator {
+    color: #bdc3c7;
+    font-weight: 300;
+}
+
+.meeting-section h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.meeting-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e1e5e9;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.current-meeting .meeting-card {
+    border-left: 5px solid #28a745;
+}
+
+.next-meeting .meeting-card {
+    border-left: 5px solid #007bff;
+}
+
+/* No meeting state */
+.no-meeting {
+    text-align: center;
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.no-meeting p {
+    font-style: italic;
+}
+
+/* Meeting info */
+.meeting-info {
+    text-align: center;
+}
+
+.meeting-title {
+    font-size: 1.8rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* Keep meeting titles equal size */
+.current-meeting .meeting-title,
+.next-meeting .meeting-title {
+    font-size: 1.8rem;
+}
+
+/* Meeting date styling for next meeting */
+.meeting-date {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #dc3545; /* Red color for visibility */
+    background: rgba(220, 53, 69, 0.1);
+    padding: 0.5rem 1rem;
+    margin: 0.5rem 0 1rem 0;
+    border-radius: 8px;
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.meeting-details {
+    margin-bottom: 1.5rem;
+    color: #6c757d;
+}
+
+.meeting-time {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.meeting-location {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.meeting-duration {
+    font-size: 1rem;
+    color: #007bff;
+    font-weight: 500;
+}
+
+/* Countdown styles */
+.countdown-container, .time-until-container {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    border-radius: 10px;
+    color: white;
+}
+
+.time-until-container {
+    background: linear-gradient(135deg, #4834d4, #686de0);
+}
+
+.countdown-label, .time-until-label {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.countdown, .time-until {
+    font-size: 3rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Keep countdown and time-until equal size */
+.current-meeting .countdown,
+.next-meeting .time-until {
+    font-size: 3rem;
+}
+
+/* Meeting description */
+.meeting-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+
+/* Footer */
+footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e1e5e9;
+    text-align: center;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.status-indicator {
+    font-size: 1rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-indicator.connected {
+    animation: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        width: 98vw;
+        padding: 1rem;
+    }
+    
+    main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        gap: 1.5rem;
+        grid-template-areas: 
+            "timeblock"
+            "current"
+            "next";
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .meeting-title {
+        font-size: 1.4rem;
+    }
+    
+    /* Reset sizes for mobile - make them consistent */
+    .current-meeting .meeting-title,
+    .next-meeting .meeting-title {
+        font-size: 1.4rem;
+    }
+    
+    .countdown, .time-until,
+    .current-meeting .countdown,
+    .next-meeting .time-until {
+        font-size: 2rem;
+    }
+    
+    /* Adjust meeting date for mobile */
+    .meeting-date {
+        font-size: 1.1rem;
+        padding: 0.4rem 0.8rem;
+        margin: 0.4rem 0 0.8rem 0;
+    }
+    
+
+}
+
+/* Animation for updates - only for current meeting */
+.current-meeting .meeting-card.updating {
+    transform: scale(1.01);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+/* Priority indicators */
+.meeting-card.urgent {
+    border-left-color: #dc3545 !important;
+    animation: urgentPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes urgentPulse {
+    from { box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); }
+    to { box-shadow: 0 10px 25px rgba(220, 53, 69, 0.2); }
+}

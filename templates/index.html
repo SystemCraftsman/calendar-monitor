@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Monitor</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 Calendar Monitor</h1>
+            <div class="current-time" id="currentTime"></div>
+        </header>
+
+        <main>
+            <!-- Time Blocks Section -->
+            <section class="meeting-section time-blocks" id="timeBlocksSection">
+                <div class="time-block-bar" id="timeBlockBar">
+                    <div class="no-time-block" id="noActiveTimeBlocks">
+                        <span class="time-block-label">📋 Time Block:</span>
+                        <span class="time-block-value">None</span>
+                    </div>
+                    <div class="active-time-block-info" id="activeTimeBlockInfo" style="display: none;">
+                        <span class="time-block-label">📋 Time Block:</span>
+                        <span class="time-block-title" id="activeTimeBlockTitle"></span>
+                        <span class="time-block-separator">•</span>
+                        <span class="time-block-time" id="activeTimeBlockTime"></span>
+                        <span class="time-block-separator">•</span>
+                        <span class="time-block-countdown" id="activeTimeBlockCountdown">00:00</span>
+                        <span class="time-block-remaining">remaining</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Current Meeting Section -->
+            <section class="meeting-section current-meeting" id="currentMeetingSection">
+                <h2>🎯 Current Event</h2>
+                <div class="meeting-card" id="currentMeetingCard">
+                    <div class="no-meeting" id="noCurrentMeeting">
+                        <p>No event in progress</p>
+                    </div>
+                    <div class="meeting-info" id="currentMeetingInfo" style="display: none;">
+                        <h3 class="meeting-title" id="currentMeetingTitle"></h3>
+                        <div class="meeting-details">
+                            <div class="meeting-time" id="currentMeetingTime"></div>
+                            <div class="meeting-location" id="currentMeetingLocation"></div>
+                        </div>
+                        <div class="countdown-container">
+                            <div class="countdown-label">Time Remaining:</div>
+                            <div class="countdown" id="currentMeetingCountdown">00:00</div>
+                        </div>
+                        <div class="meeting-description" id="currentMeetingDescription"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Next Meeting Section -->
+            <section class="meeting-section next-meeting" id="nextMeetingSection">
+                <h2>⏭️ Next Event</h2>
+                <div class="meeting-card" id="nextMeetingCard">
+                    <div class="no-meeting" id="noNextMeeting">
+                        <p>No upcoming events</p>
+                    </div>
+                    <div class="meeting-info" id="nextMeetingInfo" style="display: none;">
+                        <h3 class="meeting-title" id="nextMeetingTitle"></h3>
+                        <div class="meeting-date" id="nextMeetingDate" style="display: none;"></div>
+                        <div class="meeting-details">
+                            <div class="meeting-time" id="nextMeetingTime"></div>
+                            <div class="meeting-location" id="nextMeetingLocation"></div>
+                            <div class="meeting-duration" id="nextMeetingDuration"></div>
+                        </div>
+                        <div class="time-until-container">
+                            <div class="time-until-label">Starts in:</div>
+                            <div class="time-until" id="nextMeetingTimeUntil">00:00</div>
+                        </div>
+                        <div class="meeting-description" id="nextMeetingDescription"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="connection-status">
+                <span class="status-indicator" id="connectionStatus">🔴</span>
+                <span id="connectionText">Connecting...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
