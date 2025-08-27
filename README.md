@@ -19,8 +19,10 @@ A real-time calendar monitoring application built with Rust that displays your c
 - **Smart Caching**: Efficient 5-minute caching to reduce load times
 
 ### 📅 **Calendar Integration**
+- **Google Calendar OAuth**: Easy "Login with Google" integration - no complex setup needed
 - **ICS File Support**: Read from local `.ics` files or live URLs
-- **Recurring Events**: Full support for weekly recurring events with `RRULE`
+- **Multi-Source Support**: Combine Google Calendar with ICS feeds seamlessly
+- **Recurring Events**: Full support for weekly recurring events with `RRULE` and `UNTIL` clauses
 - **Timezone Handling**: Proper timezone conversion (supports Europe/Istanbul)
 - **Cross-midnight Events**: Handles events that span midnight correctly
 - **Event Filtering**: Separate handling of regular events vs time blocks
@@ -44,6 +46,7 @@ The application displays three main sections:
 
 ```
 ┌─────────────────────────────────────────┐
+│     📅 Calendar Monitor  🔗 Connect     │
 │           📋 Time Block: Draft.dev      │
 │        22:00-01:00 • 45:23 remaining    │
 └─────────────────────────────────────────┘
@@ -63,7 +66,7 @@ The application displays three main sections:
 
 - **Rust** (2024 edition or later)
 - **Cargo** (comes with Rust)
-- **ICS calendar files** or URLs
+- **Google account** (for Google Calendar integration) OR **ICS calendar files/URLs**
 
 ### Installation
 
@@ -93,6 +96,9 @@ The application displays three main sections:
 6. **Open in browser**
    Navigate to `http://127.0.0.1:3000`
 
+7. **Connect Google Calendar** (optional)
+   Click "Connect Google Calendar" to add Google Calendar events to your feed
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -100,17 +106,32 @@ The application displays three main sections:
 Create a `.env` file in the project root:
 
 ```env
+# === ICS Calendar Sources ===
 # Single ICS file (local or URL)
 ICS_FILE_PATH=./calendars/my-calendar.ics
 
 # Multiple ICS files (comma-separated)
 ICS_FILE_PATHS=./work.ics,./personal.ics,https://calendar.example.com/feed.ics
 
+# === Google Calendar OAuth (Optional) ===
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+
 # Optional: Custom cache duration (default: 300 seconds)
 CACHE_DURATION_SECS=300
 ```
 
 ### Supported Calendar Sources
+
+#### 🔗 **Google Calendar (Recommended)**
+Easiest setup - just click "Connect Google Calendar" button:
+1. No complex configuration needed
+2. Works around company restrictions
+3. Automatic authentication flow
+4. Direct API access
+
+See [Google OAuth Setup Guide](GOOGLE_OAUTH_SETUP_SIMPLE.md) for details.
 
 #### 📁 **Local ICS Files**
 ```env
@@ -123,8 +144,10 @@ ICS_FILE_PATHS=https://calendar.google.com/calendar/ical/your-calendar-id/basic.
 ```
 
 #### 🔗 **Mixed Sources**
+Combine Google Calendar OAuth with ICS feeds:
 ```env
 ICS_FILE_PATHS=./local-calendar.ics,https://remote-calendar.com/feed.ics
+# Plus Google OAuth for additional events
 ```
 
 ### Calendar Setup Examples
@@ -254,6 +277,8 @@ cargo tarpaulin --out html
 | `/` | GET | Serve main HTML page |
 | `/ws` | GET | WebSocket upgrade for real-time updates |
 | `/api/meetings` | GET | JSON API for current meeting data |
+| `/auth/google/login` | GET | Google OAuth login redirect |
+| `/auth/google/callback` | GET | Google OAuth callback handler |
 | `/static/*` | GET | Static assets (CSS, JS) |
 
 ### WebSocket Message Format
@@ -323,24 +348,33 @@ cargo tarpaulin --out html
 4. See technical documentation for details
 </details>
 
-### Debug Mode
+### Development & Production
 
-Enable verbose logging to troubleshoot issues:
+The application is optimized for production with clean logging:
 
 ```bash
+# Production mode (default)
+cargo run
+
+# Development with debug logging
 RUST_LOG=debug cargo run
+
+# Run comprehensive test suite
+cargo test
 ```
 
-This will show detailed information about:
-- ICS file parsing
-- Meeting filtering
-- Cache operations
-- WebSocket connections
+**Production Benefits**:
+- Clean, minimal logging output
+- Optimized performance without debug overhead
+- 15 comprehensive unit tests ensure reliability
+- All debugging functionality covered by tests
 
 ## 📚 Documentation
 
+- **[Google OAuth Setup](GOOGLE_OAUTH_SETUP_SIMPLE.md)** - Easy Google Calendar integration (recommended)
+- **[Testing Guide](TESTING.md)** - Comprehensive test documentation and coverage
 - **[Technical Documentation](TECHNICAL_DOCUMENTATION.md)** - Detailed code explanation and Rust concepts
-- **[ICS Setup Guide](ICS_CALENDAR_SETUP.md)** - Calendar integration instructions
+- **[ICS Setup Guide](ICS_CALENDAR_SETUP.md)** - Manual calendar file setup
 
 ## 🤝 Contributing
 

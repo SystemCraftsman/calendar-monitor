@@ -87,6 +87,11 @@ impl Meeting {
         matches!(self.status(), MeetingStatus::Upcoming)
     }
 
+    /// Check if the meeting has ended
+    pub fn has_ended(&self) -> bool {
+        matches!(self.status(), MeetingStatus::Ended)
+    }
+
     /// Format time remaining as a human-readable string (e.g., "15:30" for 15 minutes 30 seconds)
     pub fn format_time_remaining(&self) -> String {
         let seconds = match self.status() {

@@ -101,21 +101,7 @@ impl CalendarService {
             .cloned()
             .cloned();
             
-        // Debug time blocks filtering
-        let time_blocks: Vec<_> = meetings.iter().filter(|m| m.is_time_block()).collect();
-        tracing::info!("=== MEETING FILTERING DEBUG ===");
-        tracing::info!("Total meetings: {}", meetings.len());
-        tracing::info!("Regular meetings: {}", regular_meetings.len());
-        tracing::info!("Time blocks: {}", time_blocks.len());
-        
-        for (i, meeting) in meetings.iter().take(5).enumerate() {
-            tracing::info!("Meeting {}: '{}' (is_time_block: {}, status: {:?})", 
-                i, meeting.title, meeting.is_time_block(), meeting.status());
-        }
-        
-        tracing::info!("Selected current: {:?}", current_meeting.as_ref().map(|m| &m.title));
-        tracing::info!("Selected next: {:?}", next_meeting.as_ref().map(|m| &m.title));
-        tracing::info!("===============================");
+
 
         Ok((current_meeting, next_meeting))
     }
@@ -134,25 +120,7 @@ impl CalendarService {
             .cloned()
             .collect();
             
-        tracing::info!("=== TIME BLOCKS DEBUG ===");
-        tracing::info!("Total time blocks found: {}", all_time_blocks.len());
-        tracing::info!("Active time blocks: {}", active_time_blocks.len());
-        
-        for (i, tb) in all_time_blocks.iter().take(10).enumerate() {
-            tracing::info!("Time block {}: '{}' (status: {:?}, time: {}-{} on {})", 
-                i, tb.title, tb.status(), 
-                tb.start_time.format("%H:%M"), tb.end_time.format("%H:%M"),
-                tb.start_time.format("%Y-%m-%d"));
-                
-            // Special debug for Draft.dev events
-            if tb.title.contains("Draft.dev") {
-                tracing::info!("  📋 [Draft.dev] DETAILS: {} to {} (now: {})", 
-                    tb.start_time.format("%Y-%m-%d %H:%M:%S UTC"),
-                    tb.end_time.format("%Y-%m-%d %H:%M:%S UTC"),
-                    chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
-            }
-        }
-        tracing::info!("========================");
+
 
         Ok(active_time_blocks)
     }
@@ -229,10 +197,8 @@ impl CalendarService {
                     tracing::info!("Loaded {} meetings from {} (total now: {})", 
                         meetings.len(), ics_path, count_after);
                     
-                    // Debug: Show first few meetings from this file
-                    for (i, meeting) in meetings.iter().take(3).enumerate() {
-                        tracing::info!("  Meeting {}: '{}' at {}", i, meeting.title, meeting.start_time);
-                    }
+
+
                 }
                 Err(e) => {
                     tracing::warn!("Failed to parse ICS file '{}': {}", ics_path, e);
@@ -243,17 +209,6 @@ impl CalendarService {
         }
 
         tracing::info!("Before sort/dedup: {} meetings", all_meetings.len());
-        
-        // Debug Draft.dev events before deduplication
-        for (i, meeting) in all_meetings.iter().enumerate() {
-            if meeting.title.contains("Draft.dev") {
-                tracing::info!("BEFORE DEDUP - Draft.dev #{}: {} to {} (dur: {} min)", 
-                    i, 
-                    meeting.start_time.format("%Y-%m-%d %H:%M:%S UTC"),
-                    meeting.end_time.format("%Y-%m-%d %H:%M:%S UTC"),
-                    (meeting.end_time - meeting.start_time).num_minutes());
-            }
-        }
         
         // Sort all meetings by start time
         all_meetings.sort_by(|a, b| a.start_time.cmp(&b.start_time));
@@ -286,7 +241,6 @@ impl CalendarService {
         all_meetings.sort_by(|a, b| a.start_time.cmp(&b.start_time));
         
         // Remove duplicates based on title and start time, keeping the one with later end time
-        tracing::info!("=== STARTING CUSTOM DEDUPLICATION ===");
         let mut i = 0;
         while i < all_meetings.len() {
             let mut j = i + 1;
@@ -586,6 +540,15 @@ impl CalendarService {
                 start.format("%Y-%m-%d %H:%M:%S UTC"), 
                 end.format("%Y-%m-%d %H:%M:%S UTC"), 
                 start.weekday());
+            
+            // Check for UNTIL clause and respect it
+            if let Some(until_date) = self.parse_rrule_until(rrule) {
+                tracing::info!("  UNTIL clause found: {}", until_date.format("%Y-%m-%d"));
+                if today > until_date || tomorrow > until_date {
+                    tracing::info!("  → Skipping recurring event - past UNTIL date");
+                    return Ok(meetings); // Return empty if past the UNTIL date
+                }
+            }
                 
             let duration = end - start;
             
@@ -653,6 +616,27 @@ impl CalendarService {
         }
         
         Ok(meetings)
+    }
+
+    /// Parse UNTIL date from RRULE string
+    pub fn parse_rrule_until(&self, rrule: &str) -> Option<chrono::NaiveDate> {
+        if let Some(start) = rrule.find("UNTIL=") {
+            let start = start + 6; // Skip "UNTIL="
+            let end = rrule[start..].find(';').map(|i| start + i).unwrap_or(rrule.len());
+            let until_str = &rrule[start..end];
+            
+            // Parse different UNTIL formats
+            // Format: 20250620T235959 or 20250620T235959Z
+            if let Some(date_part) = until_str.get(0..8) {
+                if let Ok(date) = chrono::NaiveDate::parse_from_str(date_part, "%Y%m%d") {
+                    tracing::debug!("Parsed UNTIL date: {} from '{}'", date.format("%Y-%m-%d"), until_str);
+                    return Some(date);
+                }
+            }
+            
+            tracing::warn!("Failed to parse UNTIL date: '{}'", until_str);
+        }
+        None
     }
 
     /// Check if a recurring event should occur on a given date

@@ -39,14 +39,47 @@ header {
 header h1 {
     font-size: 3rem;
     color: #2c3e50;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
     font-weight: 700;
+}
+
+.header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .current-time {
     font-size: 1.2rem;
     color: #6c757d;
     font-weight: 500;
+}
+
+.google-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #4285f4;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(66, 133, 244, 0.3);
+}
+
+.google-login-btn:hover {
+    background: #3367d6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.4);
+}
+
+.google-icon {
+    font-size: 1.1rem;
 }
 
 /* Main content */
