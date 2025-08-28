@@ -70,14 +70,25 @@ jobs:
       - name: Install cross compilation tools
         if: matrix.cross
         run: |
-          cargo install cross --git https://github.com/cross-rs/cross --rev 4973c7cc
+          cargo install cross
+          
+      - name: Setup cross environment
+        if: matrix.cross
+        run: |
+          # Print cross version for debugging
+          cross --version
+          # Print available targets
+          rustup target list --installed
+        shell: bash
 
       - name: Build
         run: |
           if [ "${{ matrix.cross }}" = "true" ]; then
-            cross build --release --target ${{ matrix.target }}
+            echo "Building with cross for target: ${{ matrix.target }}"
+            cross build --release --target ${{ matrix.target }} --verbose
           else
-            cargo build --release --target ${{ matrix.target }}
+            echo "Building with cargo for target: ${{ matrix.target }}"
+            cargo build --release --target ${{ matrix.target }} --verbose
           fi
         shell: bash
 
