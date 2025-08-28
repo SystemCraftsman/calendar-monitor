@@ -12,10 +12,12 @@ use tokio::time::interval;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::{info, warn};
 
+mod config;
 mod calendar;
 mod meeting;
 mod google_calendar;
 
+use config::Config;
 use calendar::CalendarService;
 use meeting::Meeting;
 use google_calendar::{GoogleCalendarService, GoogleTokens};
@@ -33,6 +35,7 @@ type GoogleTokensStore = Arc<Mutex<Option<GoogleTokens>>>;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub config: Arc<Config>,
     pub google_tokens: GoogleTokensStore,
 }
 
@@ -41,16 +44,43 @@ async fn main() -> anyhow::Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    // Load environment variables
-    match dotenv::dotenv() {
-        Ok(path) => info!("Loaded .env file from: {:?}", path),
-        Err(e) => warn!("Could not load .env file: {}", e),
+    // Load environment variables from .env file (for development)
+    if let Err(_e) = dotenv::dotenv() {
+        // .env file is optional - don't warn in production
     }
 
     info!("Starting Calendar Monitor application");
 
+    // Load configuration
+    let config = match Config::load() {
+        Ok(config) => {
+            info!("Configuration loaded successfully");
+            Arc::new(config)
+        }
+        Err(e) => {
+            warn!("Failed to load configuration: {}", e);
+            info!("Using default configuration with environment variables");
+            // Fallback to default config with env vars
+            let mut default_config = Config::default();
+            if let Err(env_err) = default_config.apply_env_vars() {
+                return Err(anyhow::anyhow!(
+                    "Configuration error: {}. Original error: {}", 
+                    env_err, e
+                ));
+            }
+            if let Err(validation_err) = default_config.validate() {
+                return Err(anyhow::anyhow!(
+                    "Configuration validation failed: {}", 
+                    validation_err
+                ));
+            }
+            Arc::new(default_config)
+        }
+    };
+
     // Create shared state for Google tokens
     let app_state = AppState {
+        config: config.clone(),
         google_tokens: Arc::new(Mutex::new(None)),
     };
 
@@ -67,8 +97,9 @@ async fn main() -> anyhow::Result<()> {
         .with_state(app_state);
 
     // Run the server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
-    info!("Server running on http://127.0.0.1:3000");
+    let bind_address = config.bind_address();
+    let listener = tokio::net::TcpListener::bind(&bind_address).await?;
+    info!("Server running on http://{}", bind_address);
     
     axum::serve(listener, app).await?;
 

@@ -60,66 +60,104 @@ The application displays three main sections:
 └──────────────────────┴──────────────────┘
 ```
 
-## 🚀 Quick Start
+## 🚀 **Quick Installation**
 
-### Prerequisites
+### **One-Line Installation** (Recommended)
 
-- **Rust** (2024 edition or later)
-- **Cargo** (comes with Rust)
-- **Google account** (for Google Calendar integration) OR **ICS calendar files/URLs**
+```bash
+curl -sSL https://raw.githubusercontent.com/systemcraftsman/calendar-monitor/main/install.sh | sudo bash
+```
 
-### Installation
+This automatically:
+- ✅ **Detects your architecture** (x86_64, ARM64, ARMv7)
+- ✅ **Downloads the correct binary** for your system
+- ✅ **Sets up systemd service** for auto-start
+- ✅ **Creates configuration** at `/etc/calendar-monitor/config.toml`
+- ✅ **Works on Raspberry Pi** (ARM64/ARMv7)
 
-1. **Clone the repository**
+### **Supported Platforms**
+
+| Platform | Architecture | Status |
+|----------|-------------|--------|
+| 🐧 **Linux x86_64** | Intel/AMD 64-bit | ✅ Fully Supported |
+| 🍓 **Raspberry Pi 4** | ARM64 (aarch64) | ✅ Fully Supported |
+| 🍓 **Raspberry Pi 3** | ARMv7 | ✅ Fully Supported |
+| 🍎 **macOS Intel** | x86_64 | ✅ Fully Supported |
+| 🍎 **macOS Apple Silicon** | ARM64 | ✅ Fully Supported |
+| 🪟 **Windows 10/11** | x86_64 | ✅ Fully Supported |
+
+### **After Installation**
+
+1. **Configure your calendars**:
    ```bash
-   git clone https://github.com/yourusername/calendar-monitor.git
-   cd calendar-monitor
+   sudo nano /etc/calendar-monitor/config.toml
    ```
 
-2. **Install dependencies**
+2. **Start the service**:
    ```bash
-   cargo build
+   sudo systemctl start calendar-monitor
+   sudo systemctl enable calendar-monitor  # Auto-start on boot
    ```
 
-3. **Create configuration file**
-   ```bash
-   cp .env.example .env
-   ```
+3. **Access the interface**: http://localhost:3000
 
-4. **Configure your calendars** (see [Configuration](#-configuration))
+4. **Connect Google Calendar** (optional): Click "Connect Google Calendar"
 
-5. **Run the application**
-   ```bash
-   cargo run
-   ```
+### **Alternative Installation Methods**
 
-6. **Open in browser**
-   Navigate to `http://127.0.0.1:3000`
-
-7. **Connect Google Calendar** (optional)
-   Click "Connect Google Calendar" to add Google Calendar events to your feed
+- 📦 **[Manual Installation](INSTALLATION.md)** - Download pre-built binaries
+- 🔨 **[Build from Source](INSTALLATION.md#building-from-source)** - For developers
+- 🐳 **Docker** - Coming soon
 
 ## ⚙️ Configuration
 
-### Environment Variables
+### **Configuration Files** (Recommended)
 
-Create a `.env` file in the project root:
+Calendar Monitor uses a flexible configuration system with **TOML** files:
 
-```env
-# === ICS Calendar Sources ===
-# Single ICS file (local or URL)
-ICS_FILE_PATH=./calendars/my-calendar.ics
+**Configuration locations** (in order of priority):
+1. `./calendar-monitor.toml` (current directory)
+2. `~/.config/calendar-monitor/config.toml` (user config)  
+3. `/etc/calendar-monitor/config.toml` (system config)
 
-# Multiple ICS files (comma-separated)
-ICS_FILE_PATHS=./work.ics,./personal.ics,https://calendar.example.com/feed.ics
+**Sample configuration:**
+```toml
+[server]
+host = "0.0.0.0"         # Bind to all interfaces ("127.0.0.1" for localhost only)
+port = 3000              # Web server port
+cache_ttl_seconds = 300  # Cache duration
 
-# === Google Calendar OAuth (Optional) ===
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+[ics]
+file_paths = [
+    "https://calendar.google.com/calendar/ical/your-id/public/basic.ics",
+    "https://outlook.live.com/owa/calendar/your-id/calendar.ics", 
+    "/path/to/local/calendar.ics",
+]
 
-# Optional: Custom cache duration (default: 300 seconds)
-CACHE_DURATION_SECS=300
+[google]
+# Optional: Google Calendar OAuth integration
+client_id = "your-google-client-id"
+client_secret = "your-google-client-secret"  
+redirect_uri = "http://localhost:3000/auth/google/callback"
+```
+
+### **Environment Variables** (Override config files)
+
+For dynamic configuration or deployment:
+
+```bash
+# Server configuration  
+export CALENDAR_MONITOR_HOST="127.0.0.1"
+export CALENDAR_MONITOR_PORT="8080"
+export CALENDAR_MONITOR_CACHE_TTL="600"
+
+# Calendar sources (comma-separated)
+export ICS_FILE_PATHS="https://cal1.ics,https://cal2.ics,/local/cal.ics"
+
+# Google OAuth (optional)
+export GOOGLE_CLIENT_ID="your-client-id"
+export GOOGLE_CLIENT_SECRET="your-client-secret"
+export GOOGLE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
 ```
 
 ### Supported Calendar Sources
@@ -371,6 +409,7 @@ cargo test
 
 ## 📚 Documentation
 
+- **[Installation Guide](INSTALLATION.md)** - Complete installation instructions for all platforms
 - **[Google OAuth Setup](GOOGLE_OAUTH_SETUP_SIMPLE.md)** - Easy Google Calendar integration (recommended)
 - **[Testing Guide](TESTING.md)** - Comprehensive test documentation and coverage
 - **[Technical Documentation](TECHNICAL_DOCUMENTATION.md)** - Detailed code explanation and Rust concepts

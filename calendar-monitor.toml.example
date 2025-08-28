@@ -1,0 +1,43 @@
+# Calendar Monitor Configuration Example
+# Copy this file to one of these locations:
+# - ./calendar-monitor.toml (current directory)
+# - ~/.config/calendar-monitor/config.toml (user config)
+# - /etc/calendar-monitor/config.toml (system config)
+
+[server]
+# Server configuration
+host = "0.0.0.0"         # Bind address ("127.0.0.1" for localhost only, "0.0.0.0" for all interfaces)
+port = 3000              # Web server port
+cache_ttl_seconds = 300  # How long to cache calendar data (seconds)
+
+[ics]
+# Calendar sources - Add your ICS URLs or local file paths
+file_paths = [
+    # Examples (uncomment and modify):
+    # "https://calendar.google.com/calendar/ical/your-calendar-id/public/basic.ics",
+    # "https://outlook.live.com/owa/calendar/your-calendar-id/calendar.ics",
+    # "https://example.com/my-calendar.ics",
+    # "/path/to/local/calendar.ics",
+    
+    # For Trello (via Planyway):
+    # "https://planyway.com/export/trello/your-board-id/feed/your-feed-id.ics",
+    
+    # For Notion:
+    # "https://notion.so/your-workspace/calendar-export.ics",
+]
+
+[google]
+# Google Calendar OAuth integration (optional)
+# To enable Google Calendar integration:
+# 1. Follow the setup guide: GOOGLE_OAUTH_SETUP_SIMPLE.md
+# 2. Get your OAuth credentials from Google Cloud Console
+# 3. Uncomment and fill in the values below
+
+# client_id = "123456789-abcdefghijklmnop.apps.googleusercontent.com"
+# client_secret = "GOCSPX-your-client-secret-here"
+# redirect_uri = "http://localhost:3000/auth/google/callback"
+
+# Notes:
+# - If you change the port above, update the redirect_uri accordingly
+# - For remote access, use your server's IP instead of localhost
+# - Make sure the redirect_uri matches exactly what you set in Google Cloud Console

@@ -159,7 +159,7 @@ impl GoogleCalendarService {
         let time_min = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
         let time_max = (now + chrono::Duration::days(1)).format("%Y-%m-%dT%H:%M:%SZ").to_string();
 
-
+        tracing::debug!("Fetching Google Calendar events from {} to {}", time_min, time_max);
 
         let url = format!(
             "https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin={}&timeMax={}&singleEvents=true&orderBy=startTime&maxResults=50",
