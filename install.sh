@@ -63,10 +63,10 @@ check_root() {
 
 # Get latest release version
 get_latest_version() {
-    log_info "Fetching latest release version..."
+    log_info "Fetching latest release version..." >&2
     local version=$(curl -s "https://api.github.com/repos/$GITHUB_REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     if [ -z "$version" ]; then
-        log_error "Failed to fetch latest version"
+        log_error "Failed to fetch latest version" >&2
         exit 1
     fi
     echo "$version"
