@@ -39,13 +39,21 @@
 
 ### 2. Configure Environment Variables
 
-Add to your `.env` file:
+Add to your `calendar-monitor.toml` file:
+
+```toml
+[google]
+client_id = "your_client_id_here"
+client_secret = "your_client_secret_here"
+redirect_uri = "http://localhost:3000/auth/google/callback"
+```
+
+Or set environment variables:
 
 ```bash
-# Google OAuth Configuration
-GOOGLE_CLIENT_ID=your_client_id_here
-GOOGLE_CLIENT_SECRET=your_client_secret_here  
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+export GOOGLE_CLIENT_ID=your_client_id_here
+export GOOGLE_CLIENT_SECRET=your_client_secret_here
+export GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
 ```
 
 ### 3. Test the Integration
@@ -79,7 +87,7 @@ cargo run
 
 ## Troubleshooting
 
-**"OAuth not configured"** → Check your `.env` file has the Google credentials  
+**"OAuth not configured"** → Check your `calendar-monitor.toml` file or environment variables have the Google credentials  
 **"403 Forbidden"** → Make sure Google Calendar API is enabled in your project  
 **"Redirect URI mismatch"** → Verify redirect URI is exactly `http://localhost:3000/auth/google/callback`  
 **"App not verified"** → For personal use, click "Advanced" → "Go to Calendar Monitor (unsafe)" - this is normal for development

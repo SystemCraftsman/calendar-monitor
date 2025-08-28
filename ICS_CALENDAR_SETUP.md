@@ -43,12 +43,19 @@ ICS (iCalendar) is a standard calendar data exchange format used by most calenda
 
 ## Step 2: Configure Environment Variables
 
-Create a `.env` file in your project root:
+Configure your calendar sources in `calendar-monitor.toml` or environment variables:
 
 ### Single Calendar
+
+**Option 1: TOML Configuration**
+```toml
+[ics]
+file_paths = ["./my_calendar.ics"]
+```
+
+**Option 2: Environment Variable**
 ```bash
-# Path to your ICS file
-ICS_FILE_PATH=./my_calendar.ics
+export ICS_FILE_PATH=./my_calendar.ics
 ```
 
 ### Multiple Calendars
@@ -77,7 +84,7 @@ If you downloaded ICS files from your calendar provider, place them in your proj
 ```
 calendar-monitor/
 ├── calendar.ics          # Your downloaded ICS file
-├── .env                  # ICS_FILE_PATH=./calendar.ics
+├── calendar-monitor.toml # Configuration file
 ├── Cargo.toml
 └── src/
 ```
@@ -88,26 +95,40 @@ calendar-monitor/
 ├── work_calendar.ics     # Work meetings
 ├── personal_calendar.ics # Personal events
 ├── project_calendar.ics  # Project deadlines
-├── .env                  # ICS_FILE_PATHS=./work.ics,./personal.ics,./project.ics
+├── calendar-monitor.toml # Configuration with multiple calendars
 ├── Cargo.toml
 └── src/
 ```
 
 ### Option B: Live ICS URLs
-If you're using live calendar URLs (like Google Calendar public feeds), **no file placement needed!** Just configure your `.env`:
+If you're using live calendar URLs (like Google Calendar public feeds), **no file placement needed!** Just configure your calendar sources:
 
+**Option 1: TOML Configuration**
+```toml
+[ics]
+# Single live calendar
+file_paths = ["https://calendar.google.com/calendar/ical/youremail@gmail.com/public/basic.ics"]
+
+# Or multiple live calendars
+file_paths = [
+  "https://work-calendar-url/basic.ics",
+  "https://personal-calendar-url/basic.ics"
+]
+```
+
+**Option 2: Environment Variables**
 ```bash
 # Single live calendar
-ICS_FILE_PATH=https://calendar.google.com/calendar/ical/youremail@gmail.com/public/basic.ics
+export ICS_FILE_PATH=https://calendar.google.com/calendar/ical/youremail@gmail.com/public/basic.ics
 
 # Multiple live calendars
-ICS_FILE_PATHS=https://work-calendar-url/basic.ics,https://personal-calendar-url/basic.ics
+export ICS_FILE_PATHS=https://work-calendar-url/basic.ics,https://personal-calendar-url/basic.ics
 ```
 
 **Project structure for live URLs:**
 ```
 calendar-monitor/
-├── .env                  # URLs only, no ICS files needed
+├── calendar-monitor.toml # URLs only, no ICS files needed
 ├── Cargo.toml
 └── src/
 ```
@@ -178,7 +199,7 @@ END:VCALENDAR
 
 ### Common Issues
 
-1. **"ICS file not found"**: Check the file path in your `.env` file
+1. **"ICS file not found"**: Check the file path in your `calendar-monitor.toml` or environment variables
 2. **"No events showing"**: Ensure your ICS file contains events for today
 3. **"Parse errors"**: Check that your ICS file is valid (try opening in a calendar app first)
 

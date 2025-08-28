@@ -196,9 +196,9 @@ ICS_FILE_PATHS=./local-calendar.ics,https://remote-calendar.com/feed.ics
 1. Open Google Calendar
 2. Go to Settings → Your calendar → Integrate calendar
 3. Copy the "Secret address in iCal format"
-4. Add to your `.env` file:
-   ```env
-   ICS_FILE_PATHS=https://calendar.google.com/calendar/ical/your-id/private-key/basic.ics
+4. Configure your calendar source in `calendar-monitor.toml` or set environment variable:
+   ```bash
+   export ICS_FILE_PATHS=https://calendar.google.com/calendar/ical/your-id/private-key/basic.ics
    ```
 </details>
 
@@ -208,9 +208,9 @@ ICS_FILE_PATHS=./local-calendar.ics,https://remote-calendar.com/feed.ics
 1. Open Outlook.com
 2. Go to Settings → View all Outlook settings → Calendar → Shared calendars
 3. Publish your calendar and copy the ICS link
-4. Add to your `.env` file:
-   ```env
-   ICS_FILE_PATHS=https://outlook.live.com/owa/calendar/your-calendar-id/calendar.ics
+4. Configure your calendar source in `calendar-monitor.toml` or set environment variable:
+   ```bash
+   export ICS_FILE_PATHS=https://outlook.live.com/owa/calendar/your-calendar-id/calendar.ics
    ```
 </details>
 
@@ -221,7 +221,7 @@ ICS_FILE_PATHS=./local-calendar.ics,https://remote-calendar.com/feed.ics
 2. Click the share icon next to your calendar
 3. Enable "Public Calendar" and copy the link
 4. Change `webcal://` to `https://` in the URL
-5. Add to your `.env` file:
+5. Configure your calendar source in `calendar-monitor.toml` or set environment variable:
    ```env
    ICS_FILE_PATHS=https://p01-calendarws.icloud.com/published/2/your-calendar-id
    ```
@@ -253,7 +253,7 @@ calendar-monitor/
 ├── templates/
 │   └── index.html       # HTML template
 ├── Cargo.toml           # Dependencies and project metadata
-├── .env                 # Configuration (create from .env.example)
+├── calendar-monitor.toml # Configuration file (optional)
 └── README.md
 ```
 
@@ -353,7 +353,7 @@ cargo tarpaulin --out html
 <details>
 <summary><strong>No events showing</strong></summary>
 
-1. Check your `.env` file configuration
+1. Check your configuration file or environment variables
 2. Verify ICS file/URL accessibility
 3. Check logs: `RUST_LOG=debug cargo run`
 4. Ensure events are for today/tomorrow

@@ -195,11 +195,20 @@ async fn main() -> anyhow::Result<()> {
     // Initialize tracing for logging
     tracing_subscriber::fmt::init();
 
-    // Load environment variables from .env file
-    match dotenv::dotenv() {
-        Ok(path) => info!("Loaded .env file from: {:?}", path),
-        Err(e) => warn!("Could not load .env file: {}", e),
-    }
+    // Load configuration from TOML files and environment variables
+    let config = match Config::load() {
+        Ok(config) => {
+            info!("Configuration loaded successfully");
+            Arc::new(config)
+        }
+        Err(e) => {
+            warn!("Failed to load configuration: {}", e);
+            info!("Using default configuration with environment variables");
+            let mut default_config = Config::default();
+            default_config.apply_env_vars().expect("Failed to apply environment variables");
+            Arc::new(default_config)
+        }
+    };
     
     // Create web server with routes
     let app = Router::new()
@@ -677,7 +686,7 @@ fn convert_ical_event_to_meeting(&self, event: IcalEvent) -> Result<Vec<Meeting>
 
 ```
 1. Server Start
-   ├── Load .env file
+   ├── Load configuration (TOML files and environment variables)
    ├── Initialize CalendarService
    └── Start web server
 
@@ -845,7 +854,7 @@ main {
 2. **Memory Safety**: No buffer overflows or use-after-free
 3. **OAuth 2.0**: Industry-standard authentication for Google Calendar
 4. **CORS**: Configurable cross-origin resource sharing
-5. **Environment Variables**: Sensitive OAuth credentials stored in .env files
+5. **Configuration Management**: Sensitive OAuth credentials stored in TOML config files or environment variables
 6. **No API Keys**: Avoids hardcoded secrets through OAuth flow
 
 ---
