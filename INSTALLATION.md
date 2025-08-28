@@ -6,7 +6,7 @@ Calendar Monitor supports multiple installation methods and runs on various arch
 
 ### **One-Line Installation**
 ```bash
-curl -sSL https://raw.githubusercontent.com/systemcraftsman/calendar-monitor/main/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/systemcraftsman/calendar-monitor/main/install.sh -o install.sh ; chmod +x install.sh ; sudo ./install.sh
 ```
 
 This script will:
@@ -20,7 +20,7 @@ This script will:
 ### **After Installation**
 1. **Configure your calendars**:
    ```bash
-   sudo nano /etc/calendar-monitor/config.toml
+   sudo vim /etc/calendar-monitor/config.toml
    ```
 
 2. **Start the service**:
