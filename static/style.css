@@ -271,6 +271,36 @@ main {
     margin-bottom: 0.5rem;
 }
 
+/* Response status labels */
+.response-status {
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    margin-left: 0.5rem;
+    display: inline-block;
+}
+
+.status-no-response {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.status-tentative {
+    background-color: #fd7e14;
+    color: white;
+}
+
+.status-declined {
+    background-color: #dc3545;
+    color: white;
+}
+
+.status-accepted {
+    background-color: #28a745;
+    color: white;
+}
+
 .meeting-duration {
     font-size: 1rem;
     color: #007bff;

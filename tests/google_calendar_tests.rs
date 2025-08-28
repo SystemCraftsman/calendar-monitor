@@ -1,4 +1,4 @@
-use calendar_monitor::google_calendar::{GoogleCalendarService, GoogleOAuthConfig};
+use calendar_monitor::google_calendar::{GoogleCalendarService, GoogleOAuthConfig, GoogleCalendarEvent, GoogleEventTime, GoogleEventAttendee};
 use calendar_monitor::config::{Config, ServerConfig, IcsConfig, GoogleConfig};
 
 #[cfg(test)]
@@ -162,5 +162,128 @@ mod tests {
         
         let service = GoogleCalendarService::new(config);
         assert!(service.is_ok());
+    }
+
+    fn create_test_google_event_with_attendees(attendees: Option<Vec<GoogleEventAttendee>>) -> GoogleCalendarEvent {
+        GoogleCalendarEvent {
+            id: "test_event_id".to_string(),
+            summary: Some("Test Meeting".to_string()),
+            start: Some(GoogleEventTime {
+                date_time: Some("2024-01-15T10:00:00Z".to_string()),
+                date: None,
+                time_zone: None,
+            }),
+            end: Some(GoogleEventTime {
+                date_time: Some("2024-01-15T11:00:00Z".to_string()),
+                date: None,
+                time_zone: None,
+            }),
+            description: Some("Test description".to_string()),
+            location: Some("Test location".to_string()),
+            attendees,
+        }
+    }
+
+    #[test]
+    fn test_google_event_attendee_structures() {
+        // Test accepted attendee
+        let accepted_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("accepted".to_string()),
+            is_self: Some(true),
+        };
+        
+        assert_eq!(accepted_attendee.response_status, Some("accepted".to_string()));
+        assert_eq!(accepted_attendee.is_self, Some(true));
+        
+        // Test declined attendee
+        let declined_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("declined".to_string()),
+            is_self: Some(true),
+        };
+        
+        assert_eq!(declined_attendee.response_status, Some("declined".to_string()));
+        
+        // Test tentative attendee
+        let tentative_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("tentative".to_string()),
+            is_self: Some(true),
+        };
+        
+        assert_eq!(tentative_attendee.response_status, Some("tentative".to_string()));
+        
+        // Test no response attendee
+        let no_response_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("needsAction".to_string()),
+            is_self: Some(true),
+        };
+        
+        assert_eq!(no_response_attendee.response_status, Some("needsAction".to_string()));
+    }
+
+    #[test]
+    fn test_google_event_with_different_response_statuses() {
+        // Test event with accepted status
+        let accepted_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("accepted".to_string()),
+            is_self: Some(true),
+        };
+        let accepted_event = create_test_google_event_with_attendees(Some(vec![accepted_attendee]));
+        assert_eq!(accepted_event.attendees.as_ref().unwrap()[0].response_status, Some("accepted".to_string()));
+
+        // Test event with declined status
+        let declined_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("declined".to_string()),
+            is_self: Some(true),
+        };
+        let declined_event = create_test_google_event_with_attendees(Some(vec![declined_attendee]));
+        assert_eq!(declined_event.attendees.as_ref().unwrap()[0].response_status, Some("declined".to_string()));
+
+        // Test event with tentative status
+        let tentative_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("tentative".to_string()),
+            is_self: Some(true),
+        };
+        let tentative_event = create_test_google_event_with_attendees(Some(vec![tentative_attendee]));
+        assert_eq!(tentative_event.attendees.as_ref().unwrap()[0].response_status, Some("tentative".to_string()));
+
+        // Test event with no response status
+        let no_response_attendee = GoogleEventAttendee {
+            email: Some("user@example.com".to_string()),
+            display_name: Some("Test User".to_string()),
+            response_status: Some("needsAction".to_string()),
+            is_self: Some(true),
+        };
+        let no_response_event = create_test_google_event_with_attendees(Some(vec![no_response_attendee]));
+        assert_eq!(no_response_event.attendees.as_ref().unwrap()[0].response_status, Some("needsAction".to_string()));
+
+        // Test event with no attendees (personal event)
+        let personal_event = create_test_google_event_with_attendees(None);
+        assert!(personal_event.attendees.is_none());
+    }
+
+    #[test]
+    fn test_google_event_time_parsing() {
+        let event_time = GoogleEventTime {
+            date_time: Some("2024-01-15T10:00:00Z".to_string()),
+            date: None,
+            time_zone: None,
+        };
+        
+        assert_eq!(event_time.date_time, Some("2024-01-15T10:00:00Z".to_string()));
+        assert!(event_time.date.is_none());
     }
 }

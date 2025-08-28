@@ -143,7 +143,7 @@ impl CalendarService {
         let meetings = self.get_meetings_for_today_and_tomorrow().await?;
         
         // Filter for active time blocks only
-        let all_time_blocks: Vec<_> = meetings.iter()
+        let _all_time_blocks: Vec<_> = meetings.iter()
             .filter(|m| m.is_time_block())
             .collect();
             

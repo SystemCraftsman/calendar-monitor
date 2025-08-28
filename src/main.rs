@@ -1,6 +1,6 @@
 use axum::{
     extract::{Query, ws::{Message, WebSocket, WebSocketUpgrade}, State},
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse},
     routing::get,
     http::{StatusCode, HeaderMap, header},
     Json, Router,

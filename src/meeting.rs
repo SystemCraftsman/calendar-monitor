@@ -9,6 +9,15 @@ pub struct Meeting {
     pub description: Option<String>,
     pub location: Option<String>,
     pub attendees: Vec<String>,
+    pub response_status: Option<ResponseStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ResponseStatus {
+    Accepted,
+    Declined,
+    Tentative,
+    NoResponse,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +40,7 @@ impl Meeting {
             description: None,
             location: None,
             attendees: Vec::new(),
+            response_status: None,
         }
     }
 
@@ -42,6 +52,31 @@ impl Meeting {
     pub fn with_location(mut self, location: String) -> Self {
         self.location = Some(location);
         self
+    }
+
+    pub fn with_response_status(mut self, response_status: ResponseStatus) -> Self {
+        self.response_status = Some(response_status);
+        self
+    }
+
+    /// Check if this meeting should be displayed based on response status
+    /// Returns false only for declined events
+    pub fn should_display(&self) -> bool {
+        match &self.response_status {
+            Some(ResponseStatus::Declined) => false,
+            _ => true,
+        }
+    }
+
+    /// Get a display label for the response status
+    pub fn response_status_label(&self) -> Option<String> {
+        match &self.response_status {
+            Some(ResponseStatus::NoResponse) => Some("Not Responded".to_string()),
+            Some(ResponseStatus::Tentative) => Some("Tentative".to_string()),
+            Some(ResponseStatus::Accepted) => None, // No label needed for accepted
+            Some(ResponseStatus::Declined) => Some("Declined".to_string()),
+            None => None, // ICS events don't have response status
+        }
     }
 
     pub fn with_attendees(mut self, attendees: Vec<String>) -> Self {

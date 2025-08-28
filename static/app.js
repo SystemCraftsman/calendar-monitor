@@ -125,7 +125,13 @@ class CalendarMonitor {
         meetingInfoDiv.style.display = 'block';
         
         // Update meeting details
-        document.getElementById('currentMeetingTitle').textContent = meeting.title;
+        const titleElement = document.getElementById('currentMeetingTitle');
+        const responseStatusLabel = this.getResponseStatusLabel(meeting.response_status);
+        titleElement.textContent = meeting.title;
+        if (responseStatusLabel) {
+            titleElement.innerHTML = `${meeting.title} <span class="response-status ${this.getResponseStatusClass(meeting.response_status)}">${responseStatusLabel}</span>`;
+        }
+        
         document.getElementById('currentMeetingTime').textContent = this.formatTimeRange(meeting.start_time, meeting.end_time);
         document.getElementById('currentMeetingLocation').textContent = meeting.location || 'No location specified';
         document.getElementById('currentMeetingDescription').textContent = meeting.description || '';
@@ -166,7 +172,13 @@ class CalendarMonitor {
         meetingInfoDiv.style.display = 'block';
         
         // Update meeting details
-        document.getElementById('nextMeetingTitle').textContent = meeting.title;
+        const titleElement = document.getElementById('nextMeetingTitle');
+        const responseStatusLabel = this.getResponseStatusLabel(meeting.response_status);
+        titleElement.textContent = meeting.title;
+        if (responseStatusLabel) {
+            titleElement.innerHTML = `${meeting.title} <span class="response-status ${this.getResponseStatusClass(meeting.response_status)}">${responseStatusLabel}</span>`;
+        }
+        
         document.getElementById('nextMeetingTime').textContent = this.formatTimeRange(meeting.start_time, meeting.end_time);
         document.getElementById('nextMeetingLocation').textContent = meeting.location || 'No location specified';
         document.getElementById('nextMeetingDescription').textContent = meeting.description || '';
@@ -260,6 +272,40 @@ class CalendarMonitor {
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
         } else {
             return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+    }
+
+    getResponseStatusLabel(responseStatus) {
+        if (!responseStatus) return null;
+        
+        switch (responseStatus) {
+            case 'NoResponse':
+                return 'Not Responded';
+            case 'Tentative':
+                return 'Tentative';
+            case 'Declined':
+                return 'Declined';
+            case 'Accepted':
+                return null; // No label for accepted events
+            default:
+                return null;
+        }
+    }
+
+    getResponseStatusClass(responseStatus) {
+        if (!responseStatus) return '';
+        
+        switch (responseStatus) {
+            case 'NoResponse':
+                return 'status-no-response';
+            case 'Tentative':
+                return 'status-tentative';
+            case 'Declined':
+                return 'status-declined';
+            case 'Accepted':
+                return 'status-accepted';
+            default:
+                return '';
         }
     }
 

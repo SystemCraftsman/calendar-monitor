@@ -98,40 +98,31 @@ mod tests {
         let now = Utc::now();
         
         // Test current meeting (started but not ended)
-        let current_meeting = Meeting {
-            title: "Current Meeting".to_string(),
-            start_time: now - chrono::Duration::minutes(30),
-            end_time: now + chrono::Duration::minutes(30),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let current_meeting = Meeting::new(
+            "Current Meeting".to_string(),
+            now - chrono::Duration::minutes(30),
+            now + chrono::Duration::minutes(30)
+        );
         assert!(current_meeting.is_active());
         assert!(!current_meeting.is_upcoming());
         assert!(!current_meeting.has_ended());
         
         // Test upcoming meeting
-        let upcoming_meeting = Meeting {
-            title: "Upcoming Meeting".to_string(),
-            start_time: now + chrono::Duration::minutes(30),
-            end_time: now + chrono::Duration::minutes(90),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let upcoming_meeting = Meeting::new(
+            "Upcoming Meeting".to_string(),
+            now + chrono::Duration::minutes(30),
+            now + chrono::Duration::minutes(90)
+        );
         assert!(!upcoming_meeting.is_active());
         assert!(upcoming_meeting.is_upcoming());
         assert!(!upcoming_meeting.has_ended());
         
         // Test ended meeting
-        let ended_meeting = Meeting {
-            title: "Ended Meeting".to_string(),
-            start_time: now - chrono::Duration::minutes(90),
-            end_time: now - chrono::Duration::minutes(30),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let ended_meeting = Meeting::new(
+            "Ended Meeting".to_string(),
+            now - chrono::Duration::minutes(90),
+            now - chrono::Duration::minutes(30)
+        );
         assert!(!ended_meeting.is_active());
         assert!(!ended_meeting.is_upcoming());
         assert!(ended_meeting.has_ended());
@@ -139,38 +130,29 @@ mod tests {
 
     #[test]
     fn test_time_block_detection() {
-        let meeting1 = Meeting {
-            title: "[Time Block]".to_string(),
-            start_time: Utc::now(),
-            end_time: Utc::now() + chrono::Duration::hours(1),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let meeting1 = Meeting::new(
+            "[Time Block]".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        );
         assert!(meeting1.is_time_block());
         
-        let meeting2 = Meeting {
-            title: "Regular Meeting".to_string(),
-            start_time: Utc::now(),
-            end_time: Utc::now() + chrono::Duration::hours(1),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let meeting2 = Meeting::new(
+            "Regular Meeting".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        );
         assert!(!meeting2.is_time_block());
     }
 
     #[test]
     fn test_meeting_countdown() {
         let now = Utc::now();
-        let meeting = Meeting {
-            title: "Test Meeting".to_string(),
-            start_time: now - chrono::Duration::minutes(30),
-            end_time: now + chrono::Duration::minutes(30),
-            description: None,
-            location: None,
-            attendees: Vec::new(),
-        };
+        let meeting = Meeting::new(
+            "Test Meeting".to_string(),
+            now - chrono::Duration::minutes(30),
+            now + chrono::Duration::minutes(30)
+        );
         
         let countdown = meeting.time_until_end();
         assert!(countdown > 25 * 60); // Should be around 30 minutes (1800 seconds)

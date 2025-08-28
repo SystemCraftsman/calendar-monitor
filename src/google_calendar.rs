@@ -2,13 +2,12 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
-    TokenResponse, TokenUrl, AccessToken, RefreshToken,
+    TokenResponse, TokenUrl,
 };
 use oauth2::basic::BasicClient;
 use oauth2::reqwest::async_http_client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use url::Url;
 
 use crate::meeting::Meeting;
@@ -35,6 +34,18 @@ pub struct GoogleCalendarEvent {
     pub end: Option<GoogleEventTime>,
     pub description: Option<String>,
     pub location: Option<String>,
+    pub attendees: Option<Vec<GoogleEventAttendee>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoogleEventAttendee {
+    pub email: Option<String>,
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>,
+    #[serde(rename = "responseStatus")]
+    pub response_status: Option<String>, // "accepted", "declined", "tentative", "needsAction"
+    #[serde(rename = "self")]
+    pub is_self: Option<bool>, // This indicates if this attendee is the authenticated user
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -227,6 +238,15 @@ impl GoogleCalendarService {
 
     /// Convert a single Google Calendar event to our Meeting struct
     fn convert_single_event_to_meeting(&self, event: GoogleCalendarEvent) -> Result<Option<Meeting>> {
+        // Determine the user's response status for this event first
+        let response_status = self.get_user_response_status(&event);
+        
+        // Skip declined events entirely
+        if let Some(crate::meeting::ResponseStatus::Declined) = response_status {
+            tracing::debug!("Skipping declined event: {:?}", event.summary);
+            return Ok(None);
+        }
+
         // Skip events without start/end times (all-day events, etc.)
         let (start_time, end_time) = match (event.start, event.end) {
             (Some(start), Some(end)) => {
@@ -257,6 +277,11 @@ impl GoogleCalendarService {
         let title = event.summary.unwrap_or_else(|| "Untitled Event".to_string());
         let mut meeting = Meeting::new(title, start_time, end_time);
 
+        // Add response status if available
+        if let Some(status) = response_status {
+            meeting = meeting.with_response_status(status);
+        }
+
         // Add description if available
         if let Some(description) = event.description {
             meeting = meeting.with_description(description);
@@ -267,11 +292,51 @@ impl GoogleCalendarService {
             meeting = meeting.with_location(location);
         }
 
-        tracing::debug!("Converted Google event: {} ({} - {})", 
-            meeting.title, 
+        // Add attendees information
+        if let Some(attendees) = event.attendees {
+            let attendee_names: Vec<String> = attendees
+                .iter()
+                .filter_map(|attendee| {
+                    attendee.display_name.clone()
+                        .or_else(|| attendee.email.clone())
+                })
+                .collect();
+            meeting = meeting.with_attendees(attendee_names);
+        }
+
+        let status_label = meeting.response_status_label()
+            .map(|s| format!(" [{}]", s))
+            .unwrap_or_default();
+
+        tracing::debug!("Converted Google event: {}{} ({} - {})", 
+            meeting.title,
+            status_label,
             meeting.start_time.format("%H:%M"), 
             meeting.end_time.format("%H:%M"));
 
         Ok(Some(meeting))
+    }
+
+    /// Determine the authenticated user's response status for an event
+    fn get_user_response_status(&self, event: &GoogleCalendarEvent) -> Option<crate::meeting::ResponseStatus> {
+        if let Some(attendees) = &event.attendees {
+            // Find the authenticated user in the attendees list
+            for attendee in attendees {
+                if attendee.is_self == Some(true) {
+                    return match attendee.response_status.as_deref() {
+                        Some("accepted") => Some(crate::meeting::ResponseStatus::Accepted),
+                        Some("declined") => Some(crate::meeting::ResponseStatus::Declined),
+                        Some("tentative") => Some(crate::meeting::ResponseStatus::Tentative),
+                        Some("needsAction") => Some(crate::meeting::ResponseStatus::NoResponse),
+                        _ => Some(crate::meeting::ResponseStatus::NoResponse),
+                    };
+                }
+            }
+            // If user is not in attendees list but there are attendees, assume they're the organizer
+            Some(crate::meeting::ResponseStatus::Accepted)
+        } else {
+            // No attendees means likely a personal event or they're the organizer
+            Some(crate::meeting::ResponseStatus::Accepted)
+        }
     }
 }
