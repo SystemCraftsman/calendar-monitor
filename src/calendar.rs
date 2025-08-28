@@ -474,13 +474,14 @@ impl CalendarService {
     }
 
     /// Convert ICS event to our Meeting struct, handling recurring events
-    fn convert_ical_event_to_meeting(&self, event: IcalEvent) -> Result<Vec<Meeting>> {
+    pub fn convert_ical_event_to_meeting(&self, event: IcalEvent) -> Result<Vec<Meeting>> {
         let mut title = "Untitled Event".to_string();
         let mut start_time: Option<DateTime<Utc>> = None;
         let mut end_time: Option<DateTime<Utc>> = None;
         let mut description: Option<String> = None;
         let mut location: Option<String> = None;
         let mut rrule: Option<String> = None;
+        let mut user_response_status: Option<crate::meeting::ResponseStatus> = None;
 
         // Parse event properties
         for property in event.properties {
@@ -522,15 +523,27 @@ impl CalendarService {
                         location = Some(value);
                     }
                 }
+                "ATTENDEE" => {
+                    // Parse ATTENDEE property to determine user's response status
+                    if let Some(response_status) = self.parse_ical_attendee_status(&property) {
+                        user_response_status = Some(response_status);
+                    }
+                }
                 _ => {} // Ignore other properties for now
             }
+        }
+
+        // Skip declined events entirely (same as Google Calendar behavior)
+        if let Some(crate::meeting::ResponseStatus::Declined) = user_response_status {
+            tracing::debug!("Skipping declined ICS event: {}", title);
+            return Ok(vec![]);
         }
 
         // Both start and end times are required
         if let (Some(start), Some(end)) = (start_time, end_time) {
             // Check if this is a recurring event
             if let Some(rrule_value) = rrule {
-                self.expand_recurring_event(title, start, end, &rrule_value, description, location)
+                self.expand_recurring_event(title, start, end, &rrule_value, description, location, user_response_status)
             } else {
                 // Non-recurring event
                 let mut meeting = Meeting::new(title.clone(), start, end);
@@ -541,6 +554,11 @@ impl CalendarService {
                 
                 if let Some(loc) = location {
                     meeting = meeting.with_location(loc);
+                }
+
+                // Add response status if available
+                if let Some(ref status) = user_response_status {
+                    meeting = meeting.with_response_status(status.clone());
                 }
                 
                 Ok(vec![meeting])
@@ -560,6 +578,7 @@ impl CalendarService {
         rrule: &str,
         description: Option<String>,
         location: Option<String>,
+        user_response_status: Option<crate::meeting::ResponseStatus>,
     ) -> Result<Vec<Meeting>> {
         let today = Utc::now().date_naive();
         let tomorrow = today + chrono::Duration::days(1);
@@ -614,6 +633,9 @@ impl CalendarService {
                 if let Some(loc) = location.as_ref() {
                     meeting = meeting.with_location(loc.clone());
                 }
+                if let Some(ref status) = user_response_status {
+                    meeting = meeting.with_response_status(status.clone());
+                }
                 meetings.push(meeting);
                 tracing::debug!("Generated recurring event for today: '{}' at {}", title, today_start);
             }
@@ -639,6 +661,9 @@ impl CalendarService {
                 }
                 if let Some(loc) = location.as_ref() {
                     meeting = meeting.with_location(loc.clone());
+                }
+                if let Some(ref status) = user_response_status {
+                    meeting = meeting.with_response_status(status.clone());
                 }
                 meetings.push(meeting);
                 tracing::debug!("Generated recurring event for tomorrow: '{}' at {}", title, tomorrow_start);
@@ -707,6 +732,30 @@ impl CalendarService {
     fn adjust_time_to_date(&self, original_time: DateTime<Utc>, target_date: chrono::NaiveDate) -> DateTime<Utc> {
         let time = original_time.time();
         target_date.and_time(time).and_local_timezone(chrono::Utc).unwrap()
+    }
+
+    /// Parse ATTENDEE property to determine response status
+    pub fn parse_ical_attendee_status(&self, property: &ical::property::Property) -> Option<crate::meeting::ResponseStatus> {
+        // Look for PARTSTAT parameter in the ATTENDEE property
+        if let Some(params) = &property.params {
+            for (param_name, param_values) in params {
+                if param_name.eq_ignore_ascii_case("PARTSTAT") {
+                    for value in param_values {
+                        return match value.to_uppercase().as_str() {
+                            "ACCEPTED" => Some(crate::meeting::ResponseStatus::Accepted),
+                            "DECLINED" => Some(crate::meeting::ResponseStatus::Declined),
+                            "TENTATIVE" => Some(crate::meeting::ResponseStatus::Tentative),
+                            "NEEDS-ACTION" => Some(crate::meeting::ResponseStatus::NoResponse),
+                            _ => None,
+                        };
+                    }
+                }
+            }
+        }
+        
+        // If no PARTSTAT found, we could also check if this is the organizer's calendar
+        // For now, assume no response status if not specified
+        None
     }
 
     /// Parse ICS datetime string to chrono DateTime<Utc>

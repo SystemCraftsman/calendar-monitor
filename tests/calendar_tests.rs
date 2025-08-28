@@ -1,5 +1,5 @@
 use calendar_monitor::calendar::CalendarService;
-use calendar_monitor::meeting::Meeting;
+use calendar_monitor::meeting::{Meeting, ResponseStatus};
 use calendar_monitor::config::{Config, ServerConfig, IcsConfig, GoogleConfig};
 use chrono::{NaiveDate, Utc};
 
@@ -172,5 +172,257 @@ mod tests {
         assert_eq!(meeting.title, "Test Meeting");
         assert_eq!(meeting.description, Some("Test description".to_string()));
         assert_eq!(meeting.location, Some("Test location".to_string()));
+    }
+
+    #[test]
+    fn test_ics_attendee_status_parsing() {
+        // Test different PARTSTAT values that would be found in ICS ATTENDEE properties
+        // Note: This test is conceptual since we can't easily create mock ical::property::Property objects
+        // In practice, this functionality is tested through integration with real ICS files
+        
+        // Test that a meeting with response status can be created and filtered
+        let accepted_meeting = Meeting::new(
+            "Accepted ICS Event".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        ).with_response_status(ResponseStatus::Accepted);
+        
+        assert!(accepted_meeting.should_display());
+        assert_eq!(accepted_meeting.response_status_label(), None);
+        
+        let declined_meeting = Meeting::new(
+            "Declined ICS Event".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        ).with_response_status(ResponseStatus::Declined);
+        
+        assert!(!declined_meeting.should_display());
+        assert_eq!(declined_meeting.response_status_label(), Some("Declined".to_string()));
+        
+        let tentative_meeting = Meeting::new(
+            "Tentative ICS Event".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        ).with_response_status(ResponseStatus::Tentative);
+        
+        assert!(tentative_meeting.should_display());
+        assert_eq!(tentative_meeting.response_status_label(), Some("Tentative".to_string()));
+        
+        let no_response_meeting = Meeting::new(
+            "No Response ICS Event".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        ).with_response_status(ResponseStatus::NoResponse);
+        
+        assert!(no_response_meeting.should_display());
+        assert_eq!(no_response_meeting.response_status_label(), Some("Not Responded".to_string()));
+    }
+
+    #[test]
+    fn test_ics_filtering_consistency_with_google_calendar() {
+        // Test that ICS events with different response statuses behave the same as Google Calendar events
+        let test_cases = [
+            (ResponseStatus::Accepted, true, None),
+            (ResponseStatus::Declined, false, Some("Declined".to_string())),
+            (ResponseStatus::Tentative, true, Some("Tentative".to_string())),
+            (ResponseStatus::NoResponse, true, Some("Not Responded".to_string())),
+        ];
+        
+        for (status, should_display, expected_label) in test_cases {
+            let meeting = Meeting::new(
+                format!("ICS Event - {:?}", status),
+                Utc::now(),
+                Utc::now() + chrono::Duration::hours(1)
+            ).with_response_status(status.clone());
+            
+            assert_eq!(meeting.should_display(), should_display, 
+                "Response status {:?} should_display mismatch", status);
+            assert_eq!(meeting.response_status_label(), expected_label,
+                "Response status {:?} label mismatch", status);
+        }
+    }
+
+    #[test]
+    fn test_ics_events_without_response_status() {
+        // Test that ICS events without ATTENDEE/PARTSTAT behave like regular calendar events
+        let meeting_no_status = Meeting::new(
+            "Regular ICS Event".to_string(),
+            Utc::now(),
+            Utc::now() + chrono::Duration::hours(1)
+        );
+        
+        // Should display (no filtering)
+        assert!(meeting_no_status.should_display());
+        // Should have no label (clean display like accepted events)
+        assert_eq!(meeting_no_status.response_status_label(), None);
+        // Should have no response status (None)
+        assert_eq!(meeting_no_status.response_status, None);
+    }
+
+    #[test]
+    fn test_ics_attendee_property_parsing() {
+        use ical::property::Property;
+        
+        let service = create_test_service();
+        
+        // Test PARTSTAT=ACCEPTED
+        let accepted_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: Some(vec![
+                ("PARTSTAT".to_string(), vec!["ACCEPTED".to_string()]),
+                ("CN".to_string(), vec!["John Doe".to_string()]),
+            ]),
+            value: Some("mailto:john@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&accepted_property);
+        assert_eq!(result, Some(ResponseStatus::Accepted));
+        
+        // Test PARTSTAT=DECLINED
+        let declined_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: Some(vec![
+                ("PARTSTAT".to_string(), vec!["DECLINED".to_string()]),
+                ("CN".to_string(), vec!["Jane Doe".to_string()]),
+            ]),
+            value: Some("mailto:jane@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&declined_property);
+        assert_eq!(result, Some(ResponseStatus::Declined));
+        
+        // Test PARTSTAT=TENTATIVE
+        let tentative_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: Some(vec![
+                ("PARTSTAT".to_string(), vec!["TENTATIVE".to_string()]),
+                ("CN".to_string(), vec!["Bob Smith".to_string()]),
+            ]),
+            value: Some("mailto:bob@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&tentative_property);
+        assert_eq!(result, Some(ResponseStatus::Tentative));
+        
+        // Test PARTSTAT=NEEDS-ACTION
+        let needs_action_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: Some(vec![
+                ("PARTSTAT".to_string(), vec!["NEEDS-ACTION".to_string()]),
+                ("CN".to_string(), vec!["Alice Johnson".to_string()]),
+            ]),
+            value: Some("mailto:alice@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&needs_action_property);
+        assert_eq!(result, Some(ResponseStatus::NoResponse));
+        
+        // Test property without PARTSTAT parameter
+        let no_partstat_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: Some(vec![
+                ("CN".to_string(), vec!["No Status User".to_string()]),
+            ]),
+            value: Some("mailto:nostatus@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&no_partstat_property);
+        assert_eq!(result, None);
+        
+        // Test property with no params
+        let no_params_property = Property {
+            name: "ATTENDEE".to_string(),
+            params: None,
+            value: Some("mailto:noparams@example.com".to_string()),
+        };
+        
+        let result = service.parse_ical_attendee_status(&no_params_property);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_ics_event_filtering_integration() {
+        use ical::parser::ical::component::IcalEvent;
+        use ical::property::Property;
+        
+        let service = create_test_service();
+        
+        // Create a mock ICS event with PARTSTAT=DECLINED
+        let declined_event = IcalEvent {
+            properties: vec![
+                Property {
+                    name: "SUMMARY".to_string(),
+                    params: None,
+                    value: Some("Declined Meeting".to_string()),
+                },
+                Property {
+                    name: "DTSTART".to_string(),
+                    params: None,
+                    value: Some("20240115T100000Z".to_string()),
+                },
+                Property {
+                    name: "DTEND".to_string(),
+                    params: None,
+                    value: Some("20240115T110000Z".to_string()),
+                },
+                Property {
+                    name: "ATTENDEE".to_string(),
+                    params: Some(vec![
+                        ("PARTSTAT".to_string(), vec!["DECLINED".to_string()]),
+                        ("CN".to_string(), vec!["Test User".to_string()]),
+                    ]),
+                    value: Some("mailto:test@example.com".to_string()),
+                },
+            ],
+            alarms: vec![],
+        };
+        
+        // Test that declined event returns empty vec (filtered out)
+        let result = service.convert_ical_event_to_meeting(declined_event);
+        assert!(result.is_ok());
+        let meetings = result.unwrap();
+        assert_eq!(meetings.len(), 0, "Declined ICS events should be filtered out");
+        
+        // Create a mock ICS event with PARTSTAT=ACCEPTED
+        let accepted_event = IcalEvent {
+            properties: vec![
+                Property {
+                    name: "SUMMARY".to_string(),
+                    params: None,
+                    value: Some("Accepted Meeting".to_string()),
+                },
+                Property {
+                    name: "DTSTART".to_string(),
+                    params: None,
+                    value: Some("20240115T100000Z".to_string()),
+                },
+                Property {
+                    name: "DTEND".to_string(),
+                    params: None,
+                    value: Some("20240115T110000Z".to_string()),
+                },
+                Property {
+                    name: "ATTENDEE".to_string(),
+                    params: Some(vec![
+                        ("PARTSTAT".to_string(), vec!["ACCEPTED".to_string()]),
+                        ("CN".to_string(), vec!["Test User".to_string()]),
+                    ]),
+                    value: Some("mailto:test@example.com".to_string()),
+                },
+            ],
+            alarms: vec![],
+        };
+        
+        // Test that accepted event is parsed and included
+        let result = service.convert_ical_event_to_meeting(accepted_event);
+        assert!(result.is_ok());
+        let meetings = result.unwrap();
+        assert_eq!(meetings.len(), 1, "Accepted ICS events should be included");
+        
+        let meeting = &meetings[0];
+        assert_eq!(meeting.title, "Accepted Meeting");
+        assert_eq!(meeting.response_status, Some(ResponseStatus::Accepted));
+        assert!(meeting.should_display());
+        assert_eq!(meeting.response_status_label(), None);
     }
 }
