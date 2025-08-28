@@ -90,7 +90,7 @@ This automatically:
 
 1. **Configure your calendars**:
    ```bash
-   sudo nano /etc/calendar-monitor/config.toml
+   sudo vim /etc/calendar-monitor/config.toml
    ```
 
 2. **Start the service**:
