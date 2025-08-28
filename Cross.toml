@@ -3,8 +3,9 @@ passthrough = [
     "RUST_LOG",
 ]
 
+# Use the default cross images - they're more reliable
 [target.aarch64-unknown-linux-gnu]
-dockerfile = "./docker/Dockerfile.aarch64"
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:edge"
 
 [target.armv7-unknown-linux-gnueabihf]
-dockerfile = "./docker/Dockerfile.armv7"
+image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:edge"
