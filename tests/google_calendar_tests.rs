@@ -1,8 +1,68 @@
 use calendar_monitor::google_calendar::{GoogleCalendarService, GoogleOAuthConfig};
+use calendar_monitor::config::{Config, ServerConfig, IcsConfig, GoogleConfig};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn create_test_config_with_oauth() -> Config {
+        Config {
+            server: ServerConfig {
+                host: "127.0.0.1".to_string(),
+                port: 3000,
+                cache_ttl_seconds: 300,
+            },
+            ics: IcsConfig {
+                file_paths: vec![],
+            },
+            google: GoogleConfig {
+                client_id: Some("test_client_id".to_string()),
+                client_secret: Some("test_client_secret".to_string()),
+                redirect_uri: Some("http://localhost:3000/auth/google/callback".to_string()),
+            },
+        }
+    }
+
+    fn create_test_config_without_oauth() -> Config {
+        Config {
+            server: ServerConfig {
+                host: "127.0.0.1".to_string(),
+                port: 3000,
+                cache_ttl_seconds: 300,
+            },
+            ics: IcsConfig {
+                file_paths: vec![],
+            },
+            google: GoogleConfig {
+                client_id: None,
+                client_secret: None,
+                redirect_uri: None,
+            },
+        }
+    }
+
+    #[test]
+    fn test_google_calendar_service_from_config_with_oauth() {
+        let config = create_test_config_with_oauth();
+        let result = GoogleCalendarService::new_from_config(&config);
+        
+        assert!(result.is_ok());
+        let service_option = result.unwrap();
+        assert!(service_option.is_some());
+        
+        let service = service_option.unwrap();
+        assert!(!service.is_authenticated()); // No tokens initially
+    }
+
+    #[test]
+    fn test_google_calendar_service_from_config_without_oauth() {
+        let config = create_test_config_without_oauth();
+        let result = GoogleCalendarService::new_from_config(&config);
+        
+        assert!(result.is_ok());
+        let service_option = result.unwrap();
+        assert!(service_option.is_none()); // Should return None when no OAuth config
+    }
 
     #[test]
     fn test_google_oauth_config_creation() {
@@ -33,8 +93,8 @@ mod tests {
     }
 
     #[test]
-    fn test_google_calendar_service_env_creation_missing_vars() {
-        // Test with missing environment variables
+    fn test_google_calendar_service_legacy_env_creation_missing_vars() {
+        // Test legacy new_from_env method with missing environment variables
         unsafe {
             std::env::remove_var("GOOGLE_OAUTH_CLIENT_ID");
             std::env::remove_var("GOOGLE_OAUTH_CLIENT_SECRET");
@@ -47,8 +107,8 @@ mod tests {
     }
 
     #[test]
-    fn test_google_calendar_service_env_creation_with_vars() {
-        // Set test environment variables
+    fn test_google_calendar_service_legacy_env_creation_with_vars() {
+        // Test legacy new_from_env method with environment variables
         unsafe {
             std::env::set_var("GOOGLE_OAUTH_CLIENT_ID", "test_client_id");
             std::env::set_var("GOOGLE_OAUTH_CLIENT_SECRET", "test_client_secret");

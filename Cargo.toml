@@ -48,3 +48,7 @@ askama_axum = "0.4"
 oauth2 = "4.4"
 url = "2.4"
 urlencoding = "2.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"

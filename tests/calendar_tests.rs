@@ -1,13 +1,71 @@
 use calendar_monitor::calendar::CalendarService;
 use calendar_monitor::meeting::Meeting;
+use calendar_monitor::config::{Config, ServerConfig, IcsConfig, GoogleConfig};
 use chrono::{NaiveDate, Utc};
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn create_test_config() -> Config {
+        Config {
+            server: ServerConfig {
+                host: "127.0.0.1".to_string(),
+                port: 3000,
+                cache_ttl_seconds: 300,
+            },
+            ics: IcsConfig {
+                file_paths: vec![
+                    "test_calendar1.ics".to_string(),
+                    "test_calendar2.ics".to_string(),
+                ],
+            },
+            google: GoogleConfig {
+                client_id: None,
+                client_secret: None,
+                redirect_uri: None,
+            },
+        }
+    }
+
     fn create_test_service() -> CalendarService {
-        CalendarService::new() // Use default constructor
+        let config = create_test_config();
+        CalendarService::new_from_config(&config)
+    }
+
+    #[test]
+    fn test_calendar_service_from_config() {
+        let config = create_test_config();
+        let _service = CalendarService::new_from_config(&config);
+        
+        // Test that the service is created successfully
+        // Since fields are private, we test that the service can be instantiated
+        // and doesn't panic - this verifies the config is properly processed
+        // We could test further by calling get_meetings_in_range if we had test ICS data
+    }
+
+    #[test]
+    fn test_calendar_service_from_config_no_ics() {
+        let config = Config {
+            server: ServerConfig {
+                host: "127.0.0.1".to_string(),
+                port: 3000,
+                cache_ttl_seconds: 600,
+            },
+            ics: IcsConfig {
+                file_paths: vec![], // Empty file paths
+            },
+            google: GoogleConfig {
+                client_id: None,
+                client_secret: None,
+                redirect_uri: None,
+            },
+        };
+        
+        let _service = CalendarService::new_from_config(&config);
+        
+        // Test that the service is created successfully with empty ICS config
+        // Since fields are private, we verify it doesn't panic on creation
     }
 
     #[test]

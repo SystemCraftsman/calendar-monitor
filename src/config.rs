@@ -150,8 +150,9 @@ impl Config {
     
     /// Validate configuration
     pub fn validate(&self) -> Result<()> {
-        if self.ics.file_paths.is_empty() {
-            return Err(anyhow!("No ICS file paths configured. Set ICS_FILE_PATHS environment variable or add paths to config file."));
+        // Only require ICS paths if there's no Google OAuth config either
+        if self.ics.file_paths.is_empty() && self.google_oauth_config().is_none() {
+            return Err(anyhow!("No ICS file paths or Google OAuth configured. Set ICS_FILE_PATHS environment variable or add paths to config file, or configure Google OAuth."));
         }
         
         // Validate Google OAuth config is complete or completely empty
@@ -166,6 +167,25 @@ impl Config {
             return Err(anyhow!(
                 "Incomplete Google OAuth configuration. Either provide all three fields (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI) or none."
             ));
+        }
+        
+        // Check for empty values in Google OAuth fields
+        if let (Some(client_id), Some(client_secret), Some(redirect_uri)) = 
+            (&self.google.client_id, &self.google.client_secret, &self.google.redirect_uri) {
+            if client_id.trim().is_empty() {
+                return Err(anyhow!("Google OAuth client_id cannot be empty"));
+            }
+            if client_secret.trim().is_empty() {
+                return Err(anyhow!("Google OAuth client_secret cannot be empty"));
+            }
+            if redirect_uri.trim().is_empty() {
+                return Err(anyhow!("Google OAuth redirect_uri cannot be empty"));
+            }
+            
+            // Validate redirect_uri is a valid URL
+            if !redirect_uri.starts_with("http://") && !redirect_uri.starts_with("https://") {
+                return Err(anyhow!("Google OAuth redirect_uri must be a valid HTTP/HTTPS URL"));
+            }
         }
         
         Ok(())
