@@ -95,29 +95,37 @@ jobs:
           fi
         shell: bash
 
-      - name: Package binary
+      - name: Package binary (Windows)
+        if: matrix.os == 'windows-x86_64'
         run: |
-          if [ "${{ matrix.os }}" = "windows-x86_64" ]; then
-            BINARY_NAME="calendar-monitor.exe"
-            ARCHIVE_NAME="calendar-monitor-${{ matrix.os }}.zip"
-            cp target/${{ matrix.target }}/release/$BINARY_NAME .
-            # Add files to zip, including LICENSE if it exists
-            if [ -f LICENSE ]; then
-              zip $ARCHIVE_NAME $BINARY_NAME README.md LICENSE
-            else
-              zip $ARCHIVE_NAME $BINARY_NAME README.md
-            fi
+          $BINARY_NAME = "calendar-monitor.exe"
+          $ARCHIVE_NAME = "calendar-monitor-${{ matrix.os }}.zip"
+          Copy-Item "target/${{ matrix.target }}/release/$BINARY_NAME" -Destination "."
+          
+          # Create list of files to compress
+          $files = @($BINARY_NAME, "README.md")
+          if (Test-Path "LICENSE") {
+            $files += "LICENSE"
+          }
+          
+          # Create zip archive using PowerShell
+          Compress-Archive -Path $files -DestinationPath $ARCHIVE_NAME -Force
+          Write-Host "Created archive: $ARCHIVE_NAME"
+        shell: powershell
+
+      - name: Package binary (Unix)
+        if: matrix.os != 'windows-x86_64'
+        run: |
+          BINARY_NAME="calendar-monitor"
+          ARCHIVE_NAME="calendar-monitor-${{ matrix.os }}.tar.gz"
+          cp target/${{ matrix.target }}/release/$BINARY_NAME .
+          # Add files to tar, including LICENSE if it exists
+          if [ -f LICENSE ]; then
+            tar czf $ARCHIVE_NAME $BINARY_NAME README.md LICENSE
           else
-            BINARY_NAME="calendar-monitor"
-            ARCHIVE_NAME="calendar-monitor-${{ matrix.os }}.tar.gz"
-            cp target/${{ matrix.target }}/release/$BINARY_NAME .
-            # Add files to tar, including LICENSE if it exists
-            if [ -f LICENSE ]; then
-              tar czf $ARCHIVE_NAME $BINARY_NAME README.md LICENSE
-            else
-              tar czf $ARCHIVE_NAME $BINARY_NAME README.md
-            fi
+            tar czf $ARCHIVE_NAME $BINARY_NAME README.md
           fi
+          echo "Created archive: $ARCHIVE_NAME"
         shell: bash
 
       - name: Upload artifact
