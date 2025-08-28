@@ -58,6 +58,15 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install cross compilation tools
         if: matrix.cross
         run: |
@@ -78,12 +87,22 @@ jobs:
             BINARY_NAME="calendar-monitor.exe"
             ARCHIVE_NAME="calendar-monitor-${{ matrix.os }}.zip"
             cp target/${{ matrix.target }}/release/$BINARY_NAME .
-            zip $ARCHIVE_NAME $BINARY_NAME README.md LICENSE*
+            # Add files to zip, including LICENSE if it exists
+            if [ -f LICENSE ]; then
+              zip $ARCHIVE_NAME $BINARY_NAME README.md LICENSE
+            else
+              zip $ARCHIVE_NAME $BINARY_NAME README.md
+            fi
           else
             BINARY_NAME="calendar-monitor"
             ARCHIVE_NAME="calendar-monitor-${{ matrix.os }}.tar.gz"
             cp target/${{ matrix.target }}/release/$BINARY_NAME .
-            tar czf $ARCHIVE_NAME $BINARY_NAME README.md LICENSE*
+            # Add files to tar, including LICENSE if it exists
+            if [ -f LICENSE ]; then
+              tar czf $ARCHIVE_NAME $BINARY_NAME README.md LICENSE
+            else
+              tar czf $ARCHIVE_NAME $BINARY_NAME README.md
+            fi
           fi
         shell: bash
 
