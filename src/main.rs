@@ -1,7 +1,8 @@
 use axum::{
     extract::{Query, ws::{Message, WebSocket, WebSocketUpgrade}, State},
-    response::{Html, IntoResponse},
-    routing::{get, get_service},
+    response::{Html, IntoResponse, Response},
+    routing::get,
+    http::{StatusCode, HeaderMap, header},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::time::interval;
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::cors::CorsLayer;
 use tracing::{info, warn};
 
 mod config;
@@ -21,6 +22,10 @@ use config::Config;
 use calendar::CalendarService;
 use meeting::Meeting;
 use google_calendar::{GoogleCalendarService, GoogleTokens};
+
+// Embed static files into the binary
+const STYLE_CSS: &str = include_str!("../static/style.css");
+const APP_JS: &str = include_str!("../static/app.js");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeetingUpdate {
@@ -92,7 +97,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/google/login", get(google_auth_login))
         .route("/auth/google/callback", get(google_auth_callback))
         .route("/auth/google/status", get(google_auth_status))
-        .nest_service("/static", get_service(ServeDir::new("static")))
+        .route("/static/style.css", get(serve_css))
+        .route("/static/app.js", get(serve_js))
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
@@ -129,7 +135,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
         let time_blocks_result = calendar_service.get_active_time_blocks().await;
         
         // Try to get Google Calendar events and merge them
-        let google_meetings = match GoogleCalendarService::new_from_env() {
+        let google_meetings = match GoogleCalendarService::new_from_config(&state.config) {
             Ok(Some(mut google_service)) => {
                 // Set stored tokens if available
                 if let Ok(tokens_guard) = state.google_tokens.lock() {
@@ -199,7 +205,7 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
     let time_blocks_result = calendar_service.get_active_time_blocks().await;
     
     // Try to get Google Calendar events and merge them
-    let google_meetings = match GoogleCalendarService::new_from_env() {
+    let google_meetings = match GoogleCalendarService::new_from_config(&state.config) {
         Ok(Some(mut google_service)) => {
             // Set stored tokens if available
             if let Ok(tokens_guard) = state.google_tokens.lock() {
@@ -273,15 +279,15 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 /// Google OAuth login endpoint
-async fn google_auth_login() -> impl IntoResponse {
-    match GoogleCalendarService::new_from_env() {
+async fn google_auth_login(State(state): State<AppState>) -> impl IntoResponse {
+    match GoogleCalendarService::new_from_config(&state.config) {
         Ok(Some(google_service)) => {
             let (auth_url, _csrf_token) = google_service.get_auth_url();
             // For now, just redirect to Google OAuth
             axum::response::Redirect::temporary(auth_url.as_str()).into_response()
         }
         Ok(None) => {
-            Html("<h1>Google OAuth not configured</h1><p>Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI environment variables.</p>".to_string()).into_response()
+            Html("<h1>Google OAuth not configured</h1><p>Please configure Google OAuth in your TOML config file or set environment variables GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI.</p>".to_string()).into_response()
         }
         Err(e) => {
             warn!("Failed to create Google OAuth client: {}", e);
@@ -299,7 +305,7 @@ async fn google_auth_callback(
         info!("Received OAuth callback with authorization code");
         
         // Exchange authorization code for tokens
-        match GoogleCalendarService::new_from_env() {
+        match GoogleCalendarService::new_from_config(&state.config) {
             Ok(Some(mut google_service)) => {
                 match google_service.exchange_code(code.clone(), oauth2::CsrfToken::new(_state.clone())).await {
                     Ok(()) => {
@@ -333,7 +339,7 @@ async fn google_auth_callback(
                 }
             }
             Ok(None) => {
-                Html("<h1>❌ Google OAuth not configured</h1><p>Please set environment variables.</p>".to_string())
+                Html("<h1>❌ Google OAuth not configured</h1><p>Please configure Google OAuth in your TOML config file or set environment variables.</p>".to_string())
             }
             Err(e) => {
                 warn!("Failed to create Google OAuth client: {}", e);
@@ -386,7 +392,7 @@ async fn google_auth_status(State(state): State<AppState>) -> impl IntoResponse 
     response.push_str(&format!("</ul>"));
     
     // Test Google Calendar service creation
-    let service_status = match GoogleCalendarService::new_from_env() {
+    let service_status = match GoogleCalendarService::new_from_config(&state.config) {
         Ok(Some(mut google_service)) => {
             // Try to restore tokens
             if let Ok(tokens_guard) = state.google_tokens.lock() {
@@ -410,4 +416,18 @@ async fn google_auth_status(State(state): State<AppState>) -> impl IntoResponse 
     response.push_str(&format!("<p><a href='/'>← Back to Calendar</a> | <a href='/auth/google/login'>🔗 Connect Google Calendar</a></p>"));
     
     Html(response)
+}
+
+/// Serve embedded CSS file
+async fn serve_css() -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "text/css".parse().unwrap());
+    (StatusCode::OK, headers, STYLE_CSS)
+}
+
+/// Serve embedded JavaScript file
+async fn serve_js() -> impl IntoResponse {
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/javascript".parse().unwrap());
+    (StatusCode::OK, headers, APP_JS)
 }

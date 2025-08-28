@@ -150,6 +150,26 @@ impl GoogleCalendarService {
         }
     }
 
+    /// Create a new Google Calendar service from configuration (TOML or env)
+    pub fn new_from_config(config: &crate::config::Config) -> Result<Option<Self>> {
+        // Try to get Google OAuth config from the config struct
+        if let (Some(client_id), Some(client_secret), Some(redirect_uri)) = 
+            (&config.google.client_id, &config.google.client_secret, &config.google.redirect_uri) {
+            let oauth_config = GoogleOAuthConfig {
+                client_id: client_id.clone(),
+                client_secret: client_secret.clone(),
+                redirect_uri: redirect_uri.clone(),
+            };
+            match Self::new(oauth_config) {
+                Ok(service) => Ok(Some(service)),
+                Err(e) => Err(e),
+            }
+        } else {
+            tracing::debug!("Google Calendar OAuth not configured in TOML config");
+            Ok(None) // OAuth not configured
+        }
+    }
+
     /// Get calendar events for today and tomorrow
     pub async fn get_calendar_events(&self) -> Result<Vec<Meeting>> {
         let tokens = self.tokens.as_ref()
