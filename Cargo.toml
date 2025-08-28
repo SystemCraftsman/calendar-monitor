@@ -18,8 +18,8 @@ serde_json = "1.0"
 # Date/Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
-# HTTP client for calendar APIs
-reqwest = { version = "0.11", features = ["json"] }
+# HTTP client for calendar APIs (using rustls for better cross-compilation)
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 
 # Environment variables & Configuration
 dotenv = "0.15"

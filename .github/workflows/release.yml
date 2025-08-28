@@ -85,6 +85,9 @@ jobs:
         run: |
           if [ "${{ matrix.cross }}" = "true" ]; then
             echo "Building with cross for target: ${{ matrix.target }}"
+            echo "Available cross targets:"
+            cross --list
+            echo "Starting build..."
             cross build --release --target ${{ matrix.target }} --verbose
           else
             echo "Building with cargo for target: ${{ matrix.target }}"
