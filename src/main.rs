@@ -125,7 +125,7 @@ async fn websocket_handler(
 
 async fn handle_socket(mut socket: WebSocket, state: AppState) {
     let mut interval = interval(Duration::from_secs(1));
-    let calendar_service = CalendarService::new_from_env();
+    let calendar_service = CalendarService::new_from_config(&state.config);
 
     loop {
         interval.tick().await;
@@ -198,7 +198,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 }
 
 async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
-    let calendar_service = CalendarService::new_from_env();
+    let calendar_service = CalendarService::new_from_config(&state.config);
     
     // Get regular meetings and active time blocks from ICS sources
     let meetings_result = calendar_service.get_current_and_next_meetings().await;

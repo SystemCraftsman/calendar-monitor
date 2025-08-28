@@ -91,11 +91,13 @@ class CalendarMonitor {
         const connectionText = document.getElementById('connectionText');
         
         if (connected) {
-            statusIndicator.textContent = '🟢';
+            statusIndicator.textContent = '●';
+            statusIndicator.style.color = '#28a745'; // Green
             statusIndicator.classList.add('connected');
             connectionText.textContent = 'Connected';
         } else {
-            statusIndicator.textContent = '🔴';
+            statusIndicator.textContent = '●';
+            statusIndicator.style.color = '#dc3545'; // Red
             statusIndicator.classList.remove('connected');
             connectionText.textContent = 'Disconnected - Reconnecting...';
         }

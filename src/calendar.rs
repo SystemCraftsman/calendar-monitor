@@ -80,6 +80,38 @@ impl CalendarService {
         }
     }
 
+    /// Initialize from TOML configuration
+    pub fn new_from_config(config: &crate::config::Config) -> Self {
+        let mut ics_paths = config.ics.file_paths.clone();
+
+        // If no paths in config, try environment variables as fallback
+        if ics_paths.is_empty() {
+            if let Ok(single_path) = env::var("ICS_FILE_PATH") {
+                tracing::info!("Found ICS_FILE_PATH in environment: {}", single_path);
+                ics_paths.push(single_path);
+            }
+
+            if let Ok(multiple_paths) = env::var("ICS_FILE_PATHS") {
+                tracing::info!("Found ICS_FILE_PATHS in environment: {}", multiple_paths);
+                for path in multiple_paths.split(',') {
+                    let trimmed_path = path.trim().to_string();
+                    if !trimmed_path.is_empty() && !ics_paths.contains(&trimmed_path) {
+                        ics_paths.push(trimmed_path);
+                    }
+                }
+            }
+        }
+
+        tracing::info!("Initialized CalendarService from config with {} ICS paths: {:?}", ics_paths.len(), ics_paths);
+
+        Self {
+            ics_file_paths: ics_paths,
+            cached_meetings: Arc::new(Mutex::new(None)),
+            last_fetch_time: Arc::new(Mutex::new(None)),
+            cache_duration_secs: config.server.cache_ttl_seconds, // Use cache TTL from config
+        }
+    }
+
     /// Get current meeting (if any) and next upcoming meeting (excluding time blocks)
     pub async fn get_current_and_next_meetings(&self) -> Result<(Option<Meeting>, Option<Meeting>)> {
         let meetings = self.get_meetings_for_today_and_tomorrow().await?;
