@@ -1,6 +1,10 @@
 use calendar_monitor::config::{Config, ServerConfig, IcsConfig, GoogleConfig};
 use std::fs;
+use std::sync::Mutex;
 use tempfile::TempDir;
+
+// Mutex to ensure sequential execution of tests that modify environment variables
+static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
 #[cfg(test)]
 mod tests {
@@ -112,6 +116,8 @@ file_paths = []
 
     #[test]
     fn test_config_environment_overrides() {
+        let _lock = TEST_MUTEX.lock().unwrap(); // Ensure sequential execution
+        
         // Clean up any existing env vars first
         std::env::remove_var("CALENDAR_MONITOR_HOST");
         std::env::remove_var("CALENDAR_MONITOR_PORT");
@@ -146,6 +152,8 @@ file_paths = []
 
     #[test]
     fn test_config_partial_environment_overrides() {
+        let _lock = TEST_MUTEX.lock().unwrap(); // Ensure sequential execution
+        
         let toml_content = create_test_toml();
         let mut config: Config = toml::from_str(&toml_content).expect("Failed to parse TOML");
 
@@ -170,6 +178,8 @@ file_paths = []
 
     #[test] 
     fn test_config_google_oauth_environment_overrides() {
+        let _lock = TEST_MUTEX.lock().unwrap(); // Ensure sequential execution
+        
         let toml_content = create_test_toml();
         let mut config: Config = toml::from_str(&toml_content).expect("Failed to parse TOML");
 
@@ -196,6 +206,8 @@ file_paths = []
 
     #[test]
     fn test_config_google_oauth_created_from_env_only() {
+        let _lock = TEST_MUTEX.lock().unwrap(); // Ensure sequential execution
+        
         // Clean up any existing env vars first - including the ones from the previous test
         std::env::remove_var("GOOGLE_CLIENT_ID");
         std::env::remove_var("GOOGLE_CLIENT_SECRET");
