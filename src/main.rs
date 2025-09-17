@@ -146,33 +146,62 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                 
                 if google_service.is_authenticated() {
                     match google_service.get_calendar_events().await {
-                        Ok(events) => events,
-                        Err(_) => Vec::new()
+                        Ok(events) => {
+                            tracing::info!("WebSocket: Fetched {} Google Calendar events", events.len());
+                            events
+                        },
+                        Err(e) => {
+                            tracing::warn!("WebSocket: Failed to fetch Google Calendar events: {}", e);
+                            Vec::new()
+                        }
                     }
                 } else {
+                    tracing::info!("WebSocket: Google Calendar not authenticated");
                     Vec::new()
                 }
             }
-            Ok(None) => Vec::new(),
-            Err(_) => Vec::new(),
+            Ok(None) => {
+                tracing::debug!("WebSocket: Google OAuth not configured");
+                Vec::new()
+            },
+            Err(e) => {
+                tracing::warn!("WebSocket: Failed to create Google Calendar service: {}", e);
+                Vec::new()
+            },
         };
         
         match (meetings_result, time_blocks_result) {
             (Ok((mut current, mut next)), Ok(active_time_blocks)) => {
+                tracing::info!("WebSocket: ICS current: {:?}, ICS next: {:?}", 
+                    current.as_ref().map(|m| &m.title), 
+                    next.as_ref().map(|m| &m.title)
+                );
+                
                 // Merge Google Calendar events with ICS events
                 if !google_meetings.is_empty() {
                     // Find current/next from Google Calendar events
                     let google_current = google_meetings.iter().find(|m| m.is_active()).cloned();
                     let google_next = google_meetings.iter().find(|m| m.is_upcoming()).cloned();
                     
-                    // Use Google Calendar events if no ICS events or if Google events are earlier
-                    if current.is_none() || (google_current.is_some() && google_current.as_ref().unwrap().start_time < current.as_ref().unwrap().start_time) {
+                    tracing::info!("WebSocket: Google current: {:?}, Google next: {:?}", 
+                        google_current.as_ref().map(|m| &m.title), 
+                        google_next.as_ref().map(|m| &m.title)
+                    );
+                    
+                    // Prioritize Google Calendar events when available
+                    // Use Google Calendar current event if it exists, or if no ICS current event, or if Google event is earlier
+                    if google_current.is_some() && (current.is_none() || google_current.as_ref().unwrap().start_time < current.as_ref().unwrap().start_time) {
+                        tracing::info!("WebSocket: Using Google current event: {}", google_current.as_ref().unwrap().title);
                         current = google_current;
                     }
                     
-                    if next.is_none() || (google_next.is_some() && google_next.as_ref().unwrap().start_time < next.as_ref().unwrap().start_time) {
+                    // Use Google Calendar next event if it exists, or if no ICS next event, or if Google event is earlier  
+                    if google_next.is_some() && (next.is_none() || google_next.as_ref().unwrap().start_time < next.as_ref().unwrap().start_time) {
+                        tracing::info!("WebSocket: Using Google next event: {}", google_next.as_ref().unwrap().title);
                         next = google_next;
                     }
+                } else {
+                    tracing::info!("WebSocket: No Google Calendar events to merge");
                 }
                 
                 let countdown_seconds = current.as_ref().map(|m| m.time_until_end());
@@ -248,12 +277,14 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
                 let google_current = google_meetings.iter().find(|m| m.is_active()).cloned();
                 let google_next = google_meetings.iter().find(|m| m.is_upcoming()).cloned();
                 
-                // Use Google Calendar events if no ICS events or if Google events are earlier
-                if current.is_none() || (google_current.is_some() && google_current.as_ref().unwrap().start_time < current.as_ref().unwrap().start_time) {
+                // Prioritize Google Calendar events when available
+                // Use Google Calendar current event if it exists, or if no ICS current event, or if Google event is earlier
+                if google_current.is_some() && (current.is_none() || google_current.as_ref().unwrap().start_time < current.as_ref().unwrap().start_time) {
                     current = google_current;
                 }
                 
-                if next.is_none() || (google_next.is_some() && google_next.as_ref().unwrap().start_time < next.as_ref().unwrap().start_time) {
+                // Use Google Calendar next event if it exists, or if no ICS next event, or if Google event is earlier
+                if google_next.is_some() && (next.is_none() || google_next.as_ref().unwrap().start_time < next.as_ref().unwrap().start_time) {
                     next = google_next;
                 }
             }

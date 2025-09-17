@@ -199,8 +199,9 @@ impl CalendarService {
             
             Ok(fresh_meetings)
         } else {
-            // Fall back to mock data if no ICS files are configured
-            self.get_mock_meetings().await
+            // No ICS files configured - return empty list, let caller decide on fallback
+            tracing::debug!("No ICS file paths configured, returning empty meetings list");
+            Ok(Vec::new())
         }
     }
 
@@ -759,7 +760,7 @@ impl CalendarService {
     }
 
     /// Parse ICS datetime string to chrono DateTime<Utc>
-    fn parse_ical_datetime(&self, dt_str: &str) -> Result<Option<DateTime<Utc>>> {
+    pub fn parse_ical_datetime(&self, dt_str: &str) -> Result<Option<DateTime<Utc>>> {
         // Handle different ICS datetime formats
         
         // UTC format: 20231225T120000Z
@@ -777,10 +778,10 @@ impl CalendarService {
             return Ok(Some(Utc.from_utc_datetime(&utc_naive)));
         }
         
-        // Date only format: 20231225
-        if let Ok(date) = chrono::NaiveDate::parse_from_str(dt_str, "%Y%m%d") {
-            let naive_datetime = date.and_hms_opt(0, 0, 0).unwrap();
-            return Ok(Some(Utc.from_utc_datetime(&naive_datetime)));
+        // Date only format: 20231225 (all-day events) - skip these
+        if let Ok(_date) = chrono::NaiveDate::parse_from_str(dt_str, "%Y%m%d") {
+            tracing::debug!("Skipping all-day event with date-only format: {}", dt_str);
+            return Ok(None); // Return None to filter out all-day events
         }
         
         tracing::warn!("Unable to parse datetime format: {}", dt_str);

@@ -260,6 +260,50 @@ mod tests {
     }
 
     #[test]
+    fn test_all_day_events_are_filtered_out() {
+        let service = create_test_service();
+        
+        // Test that date-only format (all-day events) returns None from parse_ical_datetime
+        let date_only = service.parse_ical_datetime("20231225").unwrap();
+        assert!(date_only.is_none(), "All-day events (date-only format) should return None");
+        
+        // Test that time-based formats still work
+        let with_time_utc = service.parse_ical_datetime("20231225T120000Z").unwrap();
+        assert!(with_time_utc.is_some(), "UTC datetime format should parse successfully");
+        
+        let with_time_local = service.parse_ical_datetime("20231225T120000").unwrap();
+        assert!(with_time_local.is_some(), "Local datetime format should parse successfully");
+        
+        // Test that an ICS event with date-only format gets filtered out
+        use ical::parser::ical::component::IcalEvent;
+        use ical::property::Property;
+        
+        let all_day_event = IcalEvent {
+            properties: vec![
+                Property {
+                    name: "SUMMARY".to_string(),
+                    value: Some("All Day Event".to_string()),
+                    params: None,
+                },
+                Property {
+                    name: "DTSTART".to_string(),
+                    value: Some("20231225".to_string()), // Date-only format = all-day
+                    params: None,
+                },
+                Property {
+                    name: "DTEND".to_string(),
+                    value: Some("20231226".to_string()), // Date-only format = all-day  
+                    params: None,
+                },
+            ],
+            alarms: vec![],
+        };
+        
+        let meetings = service.convert_ical_event_to_meeting(all_day_event).unwrap();
+        assert_eq!(meetings.len(), 0, "All-day events should be filtered out and return empty vector");
+    }
+
+    #[test]
     fn test_ics_attendee_property_parsing() {
         use ical::property::Property;
         
