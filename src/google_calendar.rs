@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken, Scope,
     TokenResponse, TokenUrl,
 };
 use oauth2::basic::BasicClient;
@@ -123,7 +123,19 @@ impl GoogleCalendarService {
 
     /// Check if we have valid tokens
     pub fn is_authenticated(&self) -> bool {
-        self.tokens.is_some()
+        if let Some(tokens) = &self.tokens {
+            // Check if token exists and is not expired
+            if let Some(expires_at) = tokens.expires_at {
+                let now = Utc::now();
+                // Add 5 minute buffer to refresh before actual expiration
+                expires_at > now + chrono::Duration::minutes(5)
+            } else {
+                // If no expiration info, assume valid (shouldn't happen with OAuth2)
+                true
+            }
+        } else {
+            false
+        }
     }
 
     /// Set tokens (for restoring from storage)
@@ -134,6 +146,69 @@ impl GoogleCalendarService {
     /// Get current tokens
     pub fn get_tokens(&self) -> Option<GoogleTokens> {
         self.tokens.clone()
+    }
+
+    /// Refresh expired access token using refresh token
+    pub async fn refresh_token_if_needed(&mut self) -> Result<bool> {
+        let needs_refresh = if let Some(tokens) = &self.tokens {
+            if let Some(expires_at) = tokens.expires_at {
+                let now = Utc::now();
+                // Refresh if expires within 5 minutes
+                expires_at <= now + chrono::Duration::minutes(5)
+            } else {
+                false // No expiration info, assume still valid
+            }
+        } else {
+            false // No tokens to refresh
+        };
+
+        if !needs_refresh {
+            return Ok(false); // No refresh needed
+        }
+
+        // Get refresh token
+        let refresh_token = if let Some(tokens) = &self.tokens {
+            tokens.refresh_token.clone()
+        } else {
+            return Err(anyhow!("No tokens available for refresh"));
+        };
+
+        let refresh_token = refresh_token.ok_or_else(|| anyhow!("No refresh token available"))?;
+
+        tracing::info!("Refreshing expired Google Calendar access token");
+
+        // Use OAuth2 client to refresh token
+        let token_result = self
+            .client
+            .exchange_refresh_token(&RefreshToken::new(refresh_token))
+            .request_async(async_http_client)
+            .await
+            .map_err(|e| anyhow!("OAuth token refresh failed: {}", e))?;
+
+        // Update tokens with new access token
+        let expires_at = token_result.expires_in().map(|duration| {
+            Utc::now() + chrono::Duration::seconds(duration.as_secs() as i64)
+        });
+
+        let new_tokens = GoogleTokens {
+            access_token: token_result.access_token().secret().clone(),
+            // Keep existing refresh token, or use new one if provided
+            refresh_token: token_result.refresh_token()
+                .map(|rt| rt.secret().clone())
+                .or_else(|| self.tokens.as_ref().and_then(|t| t.refresh_token.clone())),
+            expires_at,
+        };
+
+        self.tokens = Some(new_tokens.clone());
+
+        // Save refreshed tokens to disk
+        if let Err(e) = crate::config::Config::save_google_tokens(&new_tokens) {
+            tracing::warn!("Failed to save refreshed Google Calendar tokens to disk: {}", e);
+        } else {
+            tracing::info!("Successfully refreshed and saved Google Calendar tokens");
+        }
+
+        Ok(true) // Refresh successful
     }
 
     /// Create a new Google Calendar service from environment variables (OAuth)

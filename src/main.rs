@@ -13,6 +13,7 @@ use std::time::Duration;
 use tokio::time::interval;
 use tower_http::cors::CorsLayer;
 use tracing::{info, warn};
+use chrono::Utc;
 
 mod config;
 mod calendar;
@@ -93,8 +94,19 @@ async fn main() -> anyhow::Result<()> {
     // Load any saved Google Calendar tokens
     let saved_tokens = match Config::load_google_tokens() {
         Ok(tokens) => {
-            if tokens.is_some() {
-                info!("Loaded saved Google Calendar tokens from disk");
+            if let Some(ref token_info) = tokens {
+                if let Some(expires_at) = token_info.expires_at {
+                    let now = Utc::now();
+                    if expires_at > now {
+                        let minutes_until_expiry = (expires_at - now).num_minutes();
+                        info!("Loaded saved Google Calendar tokens from disk - expires in {} minutes", minutes_until_expiry);
+                    } else {
+                        let minutes_expired = (now - expires_at).num_minutes();
+                        info!("Loaded saved Google Calendar tokens from disk - expired {} minutes ago (will auto-refresh)", minutes_expired);
+                    }
+                } else {
+                    info!("Loaded saved Google Calendar tokens from disk - no expiration info");
+                }
             }
             tokens
         },
@@ -166,6 +178,25 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                     }
                 }
                 
+                // Refresh token if needed
+                match google_service.refresh_token_if_needed().await {
+                    Ok(true) => {
+                        // Token was refreshed, update stored tokens
+                        if let Some(new_tokens) = google_service.get_tokens() {
+                            if let Ok(mut tokens_guard) = state.google_tokens.lock() {
+                                *tokens_guard = Some(new_tokens);
+                                tracing::info!("WebSocket: Updated stored tokens after refresh");
+                            }
+                        }
+                    },
+                    Ok(false) => {
+                        // No refresh needed
+                    },
+                    Err(e) => {
+                        tracing::warn!("WebSocket: Failed to refresh Google Calendar tokens: {}", e);
+                    }
+                }
+                
                 if google_service.is_authenticated() {
                     match google_service.get_calendar_events().await {
                         Ok(events) => {
@@ -178,7 +209,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
                         }
                     }
                 } else {
-                    tracing::info!("WebSocket: Google Calendar not authenticated");
+                    tracing::info!("WebSocket: Google Calendar not authenticated or tokens expired");
                     Vec::new()
                 }
             }
@@ -265,6 +296,25 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
                 }
             }
             
+            // Refresh token if needed
+            match google_service.refresh_token_if_needed().await {
+                Ok(true) => {
+                    // Token was refreshed, update stored tokens
+                    if let Some(new_tokens) = google_service.get_tokens() {
+                        if let Ok(mut tokens_guard) = state.google_tokens.lock() {
+                            *tokens_guard = Some(new_tokens);
+                            info!("API: Updated stored tokens after refresh");
+                        }
+                    }
+                },
+                Ok(false) => {
+                    // No refresh needed
+                },
+                Err(e) => {
+                    warn!("API: Failed to refresh Google Calendar tokens: {}", e);
+                }
+            }
+            
             if google_service.is_authenticated() {
                 match google_service.get_calendar_events().await {
                     Ok(events) => {
@@ -277,7 +327,7 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
                     }
                 }
             } else {
-                info!("Google Calendar not authenticated");
+                info!("Google Calendar not authenticated or tokens expired");
                 Vec::new()
             }
         }
