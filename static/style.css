@@ -359,6 +359,15 @@ footer {
     font-size: 0.9rem;
 }
 
+.ip-info {
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid #dee2e6;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #495057;
+}
+
 .status-indicator {
     font-size: 1rem;
     animation: pulse 2s infinite;

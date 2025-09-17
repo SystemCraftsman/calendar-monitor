@@ -10,6 +10,7 @@ class CalendarMonitor {
 
     init() {
         this.updateCurrentTime();
+        this.loadServerInfo();
         this.connectWebSocket();
         
         // Update current time every second
@@ -32,6 +33,21 @@ class CalendarMonitor {
         });
         
         document.getElementById('currentTime').textContent = `${dateString} - ${timeString}`;
+    }
+
+    async loadServerInfo() {
+        try {
+            const response = await fetch('/api/server-info');
+            if (response.ok) {
+                const serverInfo = await response.json();
+                const ipInfoElement = document.getElementById('ipInfo');
+                ipInfoElement.textContent = `${serverInfo.local_ip}:${serverInfo.server_port}`;
+            }
+        } catch (error) {
+            console.error('Failed to load server info:', error);
+            const ipInfoElement = document.getElementById('ipInfo');
+            ipInfoElement.textContent = 'IP: Unknown';
+        }
     }
 
     connectWebSocket() {

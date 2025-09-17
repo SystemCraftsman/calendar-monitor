@@ -5,6 +5,7 @@ use axum::{
     http::{StatusCode, HeaderMap, header},
     Json, Router,
 };
+use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -33,6 +34,12 @@ pub struct MeetingUpdate {
     pub next_meeting: Option<Meeting>,
     pub countdown_seconds: Option<i64>,
     pub active_time_blocks: Vec<Meeting>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerInfo {
+    pub local_ip: String,
+    pub server_port: u16,
 }
 
 // Global state for Google Calendar tokens
@@ -83,10 +90,24 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
+    // Load any saved Google Calendar tokens
+    let saved_tokens = match Config::load_google_tokens() {
+        Ok(tokens) => {
+            if tokens.is_some() {
+                info!("Loaded saved Google Calendar tokens from disk");
+            }
+            tokens
+        },
+        Err(e) => {
+            warn!("Failed to load saved Google Calendar tokens: {}", e);
+            None
+        }
+    };
+
     // Create shared state for Google tokens
     let app_state = AppState {
         config: config.clone(),
-        google_tokens: Arc::new(Mutex::new(None)),
+        google_tokens: Arc::new(Mutex::new(saved_tokens)),
     };
 
     // Build our application with routes
@@ -94,6 +115,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/", get(index))
         .route("/ws", get(websocket_handler))
         .route("/api/meetings", get(get_meetings))
+        .route("/api/server-info", get(get_server_info))
         .route("/auth/google/login", get(google_auth_login))
         .route("/auth/google/callback", get(google_auth_callback))
         .route("/auth/google/status", get(google_auth_status))
@@ -309,6 +331,20 @@ async fn get_meetings(State(state): State<AppState>) -> impl IntoResponse {
     }
 }
 
+async fn get_server_info() -> impl IntoResponse {
+    let ip = match local_ip() {
+        Ok(ip) => ip.to_string(),
+        Err(_) => "Unable to determine".to_string(),
+    };
+    
+    let server_info = ServerInfo {
+        local_ip: ip,
+        server_port: 3000, // Default port, could be made configurable
+    };
+    
+    Json(server_info)
+}
+
 /// Google OAuth login endpoint
 async fn google_auth_login(State(state): State<AppState>) -> impl IntoResponse {
     match GoogleCalendarService::new_from_config(&state.config) {
@@ -340,11 +376,17 @@ async fn google_auth_callback(
             Ok(Some(mut google_service)) => {
                 match google_service.exchange_code(code.clone(), oauth2::CsrfToken::new(_state.clone())).await {
                     Ok(()) => {
-                        // Store tokens in global state
+                        // Store tokens in global state and persist to disk
                         if let Some(tokens) = google_service.get_tokens() {
+                            // Save to disk first
+                            if let Err(e) = Config::save_google_tokens(&tokens) {
+                                warn!("Failed to save Google Calendar tokens to disk: {}", e);
+                            }
+                            
+                            // Store in memory
                             if let Ok(mut tokens_guard) = state.google_tokens.lock() {
                                 *tokens_guard = Some(tokens);
-                                info!("Successfully stored Google Calendar tokens");
+                                info!("Successfully stored Google Calendar tokens in memory and disk");
                             }
                         }
                         

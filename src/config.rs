@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use crate::google_calendar::GoogleTokens;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -227,5 +228,73 @@ impl Config {
     /// Get server bind address
     pub fn bind_address(&self) -> String {
         format!("{}:{}", self.server.host, self.server.port)
+    }
+
+    /// Get the data directory for storing application data (like tokens)
+    pub fn get_data_dir() -> Result<PathBuf> {
+        // Try user data directory first
+        if let Some(data_dir) = dirs::data_dir() {
+            let app_data_dir = data_dir.join("calendar-monitor");
+            fs::create_dir_all(&app_data_dir)
+                .map_err(|e| anyhow!("Failed to create data directory {}: {}", app_data_dir.display(), e))?;
+            return Ok(app_data_dir);
+        }
+        
+        // Fallback to current directory
+        let fallback_dir = PathBuf::from("./data");
+        fs::create_dir_all(&fallback_dir)
+            .map_err(|e| anyhow!("Failed to create fallback data directory {}: {}", fallback_dir.display(), e))?;
+        Ok(fallback_dir)
+    }
+
+    /// Save Google Calendar tokens to persistent storage
+    pub fn save_google_tokens(tokens: &GoogleTokens) -> Result<()> {
+        let data_dir = Self::get_data_dir()?;
+        let tokens_file = data_dir.join("google_tokens.json");
+        
+        let tokens_json = serde_json::to_string_pretty(tokens)
+            .map_err(|e| anyhow!("Failed to serialize Google tokens: {}", e))?;
+        
+        fs::write(&tokens_file, tokens_json)
+            .map_err(|e| anyhow!("Failed to write Google tokens to {}: {}", tokens_file.display(), e))?;
+        
+        tracing::info!("Successfully saved Google Calendar tokens to {}", tokens_file.display());
+        Ok(())
+    }
+
+    /// Load Google Calendar tokens from persistent storage
+    pub fn load_google_tokens() -> Result<Option<GoogleTokens>> {
+        let data_dir = Self::get_data_dir()?;
+        let tokens_file = data_dir.join("google_tokens.json");
+        
+        if !tokens_file.exists() {
+            tracing::debug!("No saved Google tokens found at {}", tokens_file.display());
+            return Ok(None);
+        }
+        
+        let tokens_content = fs::read_to_string(&tokens_file)
+            .map_err(|e| anyhow!("Failed to read Google tokens from {}: {}", tokens_file.display(), e))?;
+        
+        let tokens: GoogleTokens = serde_json::from_str(&tokens_content)
+            .map_err(|e| anyhow!("Failed to parse Google tokens from {}: {}", tokens_file.display(), e))?;
+        
+        tracing::info!("Successfully loaded Google Calendar tokens from {}", tokens_file.display());
+        Ok(Some(tokens))
+    }
+
+    /// Remove saved Google Calendar tokens (for logout/disconnect)
+    pub fn remove_google_tokens() -> Result<()> {
+        let data_dir = Self::get_data_dir()?;
+        let tokens_file = data_dir.join("google_tokens.json");
+        
+        if tokens_file.exists() {
+            fs::remove_file(&tokens_file)
+                .map_err(|e| anyhow!("Failed to remove Google tokens file {}: {}", tokens_file.display(), e))?;
+            tracing::info!("Successfully removed Google Calendar tokens from {}", tokens_file.display());
+        } else {
+            tracing::debug!("No Google tokens file to remove at {}", tokens_file.display());
+        }
+        
+        Ok(())
     }
 }
