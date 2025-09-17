@@ -339,15 +339,6 @@ main {
     font-size: 3rem;
 }
 
-/* Meeting description */
-.meeting-description {
-    color: #6c757d;
-    font-size: 0.9rem;
-    line-height: 1.4;
-    max-height: 60px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
 
 

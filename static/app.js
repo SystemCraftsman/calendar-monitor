@@ -134,7 +134,6 @@ class CalendarMonitor {
         
         document.getElementById('currentMeetingTime').textContent = this.formatTimeRange(meeting.start_time, meeting.end_time);
         document.getElementById('currentMeetingLocation').textContent = meeting.location || 'No location specified';
-        document.getElementById('currentMeetingDescription').textContent = meeting.description || '';
         
         // Update countdown
         const countdownElement = document.getElementById('currentMeetingCountdown');
@@ -181,7 +180,6 @@ class CalendarMonitor {
         
         document.getElementById('nextMeetingTime').textContent = this.formatTimeRange(meeting.start_time, meeting.end_time);
         document.getElementById('nextMeetingLocation').textContent = meeting.location || 'No location specified';
-        document.getElementById('nextMeetingDescription').textContent = meeting.description || '';
         
         // Check if meeting is not today and show date if needed
         const meetingDate = new Date(meeting.start_time);
